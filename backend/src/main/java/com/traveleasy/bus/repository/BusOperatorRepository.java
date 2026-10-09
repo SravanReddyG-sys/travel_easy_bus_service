@@ -10,5 +10,6 @@ import java.util.UUID;
 @Repository
 public interface BusOperatorRepository extends JpaRepository<BusOperator, UUID> {
     Optional<BusOperator> findByOperatorCode(String operatorCode);
+    Optional<BusOperator> findByContactEmail(String contactEmail);
     boolean existsByOperatorCode(String operatorCode);
 }

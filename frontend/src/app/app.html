@@ -9,6 +9,7 @@
         </a>
       </div>
 
+      <!-- Navigation Links -->
       <div class="nav-links">
         <a routerLink="/traveller/search" routerLinkActive="active" class="nav-item">
           Search Buses
@@ -24,22 +25,49 @@
         </a>
       </div>
 
-      <!-- Role Switcher Pill -->
-      <div class="role-switcher">
-        <button
-          type="button"
-          class="role-btn"
-          [class.active]="authService.currentUser.role === 'TRAVELLER'"
-          (click)="switchRole('TRAVELLER')">
-          Traveller Mode
-        </button>
-        <button
-          type="button"
-          class="role-btn"
-          [class.active]="authService.currentUser.role === 'OPERATOR'"
-          (click)="switchRole('OPERATOR')">
-          Operator Mode
-        </button>
+      <!-- Right Header: User Session & Mode Switcher -->
+      <div class="nav-actions">
+        <!-- Role Switcher Quick Pill -->
+        <div class="role-switcher">
+          <button
+            type="button"
+            class="role-btn"
+            [class.active]="authService.currentUser.role === 'TRAVELLER'"
+            (click)="switchRole('TRAVELLER')">
+            &#128100; Traveller
+          </button>
+          <button
+            type="button"
+            class="role-btn"
+            [class.active]="authService.currentUser.role === 'OPERATOR'"
+            (click)="switchRole('OPERATOR')">
+            &#128652; Operator
+          </button>
+        </div>
+
+        <!-- User Profile / Login Button -->
+        <div class="user-session" *ngIf="authService.isLoggedIn(); else loggedOutTemplate">
+          <div class="user-info-chip" (click)="openLoginModal()">
+            <div class="avatar-circle">
+              {{ authService.currentUser.fullName.charAt(0).toUpperCase() }}
+            </div>
+            <div class="user-meta">
+              <span class="user-name">{{ authService.currentUser.fullName }}</span>
+              <span class="user-role-badge" [class.badge-operator]="authService.isOperator()">
+                {{ authService.currentUser.role }}
+              </span>
+            </div>
+          </div>
+          <button type="button" class="btn-logout" title="Sign Out / Switch" (click)="logout()">
+            Sign Out
+          </button>
+        </div>
+
+        <ng-template #loggedOutTemplate>
+          <button type="button" class="btn-login-cta" (click)="openLoginModal()">
+            Sign In / Register
+          </button>
+        </ng-template>
       </div>
     </div>
   </nav>
@@ -53,7 +81,184 @@
   <footer class="main-footer">
     <div class="footer-container">
       <p>&copy; 2026 TravelEasy Bus Microservice &bull; Pessimistic Concurrency Seat Inventory & Outbox Engine</p>
-      <p class="sub">Central Booking Service API Contract v1.0 &bull; Port: 8082 / UI: 4200</p>
+      <p class="sub">Central Booking Service API Contract v1.0 &bull; Port: 8081 / UI: 4200</p>
     </div>
   </footer>
+
+  <!-- Authentication Modal (Login / Register / Quick Switch) -->
+  <div class="modal-backdrop" *ngIf="showAuthModal" (click)="closeAuthModal()">
+    <div class="auth-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="tab-switches">
+          <button
+            type="button"
+            class="tab-btn"
+            [class.active]="authMode === 'LOGIN'"
+            (click)="authMode = 'LOGIN'">
+            Sign In
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            [class.active]="authMode === 'REGISTER'"
+            (click)="authMode = 'REGISTER'">
+            Register Account
+          </button>
+        </div>
+        <button type="button" class="btn-close" (click)="closeAuthModal()">&times;</button>
+      </div>
+
+      <!-- Quick 1-Click Demo Logins -->
+      <div class="quick-demo-section" *ngIf="authMode === 'LOGIN'">
+        <span class="section-title">⚡ Instant Demo Logins:</span>
+        <div class="demo-buttons-grid">
+          <button
+            type="button"
+            class="demo-btn traveller"
+            (click)="quickLogin('TRAVELLER')">
+            <span class="icon">&#128100;</span>
+            <div class="text">
+              <strong>Demo Traveller</strong>
+              <small>Book seats & search routes</small>
+            </div>
+          </button>
+          <button
+            type="button"
+            class="demo-btn operator"
+            (click)="quickLogin('OPERATOR', '00000000-0000-0000-0000-000000000001', 'Royal Express Travels')">
+            <span class="icon">&#128652;</span>
+            <div class="text">
+              <strong>Royal Express Operator</strong>
+              <small>Full Fleet & Schedules CRUD</small>
+            </div>
+          </button>
+          <button
+            type="button"
+            class="demo-btn operator-alt"
+            (click)="quickLogin('OPERATOR', '00000000-0000-0000-0000-000000000002', 'ZingBus Premium Lines')">
+            <span class="icon">&#128654;</span>
+            <div class="text">
+              <strong>ZingBus Operator</strong>
+              <small>Manage ZingBus fleet & manifest</small>
+            </div>
+          </button>
+        </div>
+        <div class="divider"><span>OR SIGN IN WITH CREDENTIALS</span></div>
+      </div>
+
+      <!-- Error Alert -->
+      <div class="alert alert-danger" *ngIf="authErrorMessage">
+        {{ authErrorMessage }}
+      </div>
+
+      <!-- Login Form -->
+      <form *ngIf="authMode === 'LOGIN'" (ngSubmit)="submitLogin()" class="auth-form">
+        <div class="form-group">
+          <label>Account Type</label>
+          <div class="role-selector-radios">
+            <label class="radio-label">
+              <input type="radio" [(ngModel)]="loginForm.role" name="role" value="TRAVELLER" />
+              <span>Traveller / Customer</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" [(ngModel)]="loginForm.role" name="role" value="OPERATOR" />
+              <span>Bus Fleet Operator</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <input
+            type="email"
+            [(ngModel)]="loginForm.email"
+            name="email"
+            placeholder="e.g. user@traveleasy.com"
+            required />
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input
+            type="password"
+            [(ngModel)]="loginForm.password"
+            name="password"
+            placeholder="Enter your password" />
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="authLoading">
+          {{ authLoading ? 'Signing In...' : 'Sign In' }}
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form *ngIf="authMode === 'REGISTER'" (ngSubmit)="submitRegister()" class="auth-form">
+        <div class="form-group">
+          <label>I want to register as:</label>
+          <div class="role-selector-radios">
+            <label class="radio-label">
+              <input type="radio" [(ngModel)]="registerForm.role" name="role" value="TRAVELLER" />
+              <span>Traveller / Customer</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" [(ngModel)]="registerForm.role" name="role" value="OPERATOR" />
+              <span>Bus Fleet Operator</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Full Name / Contact Person</label>
+          <input
+            type="text"
+            [(ngModel)]="registerForm.fullName"
+            name="fullName"
+            placeholder="e.g. Sneha Sharma"
+            required />
+        </div>
+
+        <div class="form-group" *ngIf="registerForm.role === 'OPERATOR'">
+          <label>Company / Travels Name</label>
+          <input
+            type="text"
+            [(ngModel)]="registerForm.companyName"
+            name="companyName"
+            placeholder="e.g. Sneha Express Travels"
+            required />
+        </div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <input
+            type="email"
+            [(ngModel)]="registerForm.email"
+            name="email"
+            placeholder="e.g. sneha@traveleasy.com"
+            required />
+        </div>
+
+        <div class="form-group">
+          <label>Contact Phone</label>
+          <input
+            type="text"
+            [(ngModel)]="registerForm.contactPhone"
+            name="contactPhone"
+            placeholder="e.g. +91-9876543210" />
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input
+            type="password"
+            [(ngModel)]="registerForm.password"
+            name="password"
+            placeholder="Choose a secure password" />
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="authLoading">
+          {{ authLoading ? 'Creating Account...' : 'Create Account' }}
+        </button>
+      </form>
+    </div>
+  </div>
 </div>

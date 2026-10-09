@@ -42,7 +42,12 @@ export class BusSearchComponent implements OnInit {
     { from: 'Delhi', to: 'Chandigarh' },
     { from: 'Mumbai', to: 'Pune' },
     { from: 'Bangalore', to: 'Chennai' },
-    { from: 'Hyderabad', to: 'Vijayawada' }
+    { from: 'Hyderabad', to: 'Vijayawada' },
+    { from: 'Bangalore', to: 'Hyderabad' },
+    { from: 'Mumbai', to: 'Goa' },
+    { from: 'Chennai', to: 'Coimbatore' },
+    { from: 'Pune', to: 'Goa' },
+    { from: 'Delhi', to: 'Agra' }
   ];
 
   constructor(

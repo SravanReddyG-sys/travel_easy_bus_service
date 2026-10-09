@@ -41,9 +41,15 @@ export class SeatMapComponent implements OnInit, OnDestroy {
       : (this.seatMap?.upperDeckSeats || []);
   }
 
+  getSeatPrice(seat: ScheduleSeatItem): number {
+    if (seat && seat.totalAmount && seat.totalAmount > 0) return seat.totalAmount;
+    if (seat && seat.baseAmount && seat.baseAmount > 0) return seat.baseAmount;
+    return seat?.seatType === 'SLEEPER' ? 750 : 550;
+  }
+
   get totalSelectedAmount(): number {
     let total = 0;
-    this.selectedSeats.forEach(seat => total += (seat.totalAmount || 0));
+    this.selectedSeats.forEach(seat => total += this.getSeatPrice(seat));
     return total;
   }
 

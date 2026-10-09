@@ -63,7 +63,7 @@
               (click)="onSeatClick(seat)"
               [title]="seat.seatNumber + ' - ' + seat.seatType + ' (₹' + seat.totalAmount + ')'">
               <span class="seat-number">{{ seat.seatNumber }}</span>
-              <span class="seat-price">₹{{ seat.totalAmount }}</span>
+              <span class="seat-price">₹{{ getSeatPrice(seat) }}</span>
             </button>
           </ng-container>
           <ng-template #emptySpace>
@@ -79,7 +79,7 @@
     <div class="selected-info">
       <span class="selected-label">Selected Seats ({{ selectedSeatsList.length }}):</span>
       <span class="seat-tag" *ngFor="let s of selectedSeatsList">
-        {{ s.seatNumber }} (₹{{ s.totalAmount }})
+        {{ s.seatNumber }} (₹{{ getSeatPrice(s) }})
       </span>
     </div>
     <div class="selected-total">

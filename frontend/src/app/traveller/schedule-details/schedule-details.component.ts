@@ -80,7 +80,10 @@ export class ScheduleDetailsComponent implements OnInit {
   }
 
   get totalAmount(): number {
-    return this.selectedSeats.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+    return this.selectedSeats.reduce((sum, s) => {
+      const price = (s.totalAmount && s.totalAmount > 0) ? s.totalAmount : ((s.baseAmount && s.baseAmount > 0) ? s.baseAmount : (s.seatType === 'SLEEPER' ? 750 : 550));
+      return sum + price;
+    }, 0);
   }
 
   lockAndHoldSeats(): void {
