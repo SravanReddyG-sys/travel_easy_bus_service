@@ -1,0 +1,243 @@
+.operator-dashboard-container {
+  max-width: 1280px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .company-sub {
+    margin: 0.25rem 0 0 0;
+    color: #64748b;
+    font-size: 0.95rem;
+  }
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+
+    &.btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+      &:hover { background: #1d4ed8; }
+    }
+
+    &.btn-secondary {
+      background: #0ea5e9;
+      color: #ffffff;
+      &:hover { background: #0284c7; }
+    }
+
+    &.btn-accent {
+      background: #f97316;
+      color: #ffffff;
+      &:hover { background: #ea580c; }
+    }
+  }
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+
+  .kpi-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+
+    &.buses-icon { background: #eff6ff; color: #2563eb; }
+    &.routes-icon { background: #f0fdf4; color: #16a34a; }
+    &.occupancy-icon { background: #faf5ff; color: #9333ea; }
+    &.revenue-icon { background: #fff7ed; color: #ea580c; font-weight: 800; }
+  }
+
+  .kpi-info {
+    display: flex;
+    flex-direction: column;
+
+    .kpi-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #0f172a;
+
+      small {
+        font-size: 0.9rem;
+        color: #94a3b8;
+        font-weight: 500;
+      }
+    }
+
+    .kpi-subtext {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+  }
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+
+  @media (max-width: 992px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .live-dot {
+      color: #22c55e;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  }
+}
+
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+  }
+
+  th {
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    background: #f8fafc;
+  }
+
+  .revenue-cell {
+    font-weight: 700;
+    color: #16a34a;
+  }
+}
+
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.feed-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+
+  .feed-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+
+    &.booked { background: #dcfce7; color: #15803d; }
+    &.locked { background: #fef9c3; color: #a16207; }
+  }
+
+  .feed-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+
+    .feed-route {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #0f172a;
+    }
+
+    .feed-ref {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+  }
+
+  .feed-amount {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #0f172a;
+  }
+}
+
+.empty-text {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 2rem 0;
+}

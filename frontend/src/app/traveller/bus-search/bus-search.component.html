@@ -1,0 +1,157 @@
+<div class="search-page-container">
+  <!-- Hero Search Banner -->
+  <header class="search-hero">
+    <div class="hero-content">
+      <h1>Book Bus Tickets Across India</h1>
+      <p class="tagline">Real-time seat selection, instant lock confirmation & zero hidden fees</p>
+
+      <!-- Search Input Card -->
+      <form class="search-form-card" (ngSubmit)="executeSearch()">
+        <div class="form-group">
+          <label>Origin City</label>
+          <input type="text" [(ngModel)]="origin" name="origin" placeholder="e.g. Delhi" required />
+        </div>
+
+        <div class="swap-icon" (click)="origin = [destination, destination = origin][0]">
+          &#8646;
+        </div>
+
+        <div class="form-group">
+          <label>Destination City</label>
+          <input type="text" [(ngModel)]="destination" name="destination" placeholder="e.g. Jaipur" required />
+        </div>
+
+        <div class="form-group date-group">
+          <label>Journey Date</label>
+          <input type="date" [(ngModel)]="travelDate" name="travelDate" required />
+        </div>
+
+        <button type="submit" class="search-btn" [disabled]="loading">
+          {{ loading ? 'Searching...' : 'Search Buses' }}
+        </button>
+      </form>
+
+      <!-- Popular Routes Pills -->
+      <div class="popular-routes">
+        <span class="label">Popular:</span>
+        <button
+          type="button"
+          class="route-pill"
+          *ngFor="let r of popularRoutes"
+          (click)="selectPopularRoute(r.from, r.to)">
+          {{ r.from }} &rarr; {{ r.to }}
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area: Filters + Results -->
+  <div class="search-body">
+    <!-- Sidebar Filters -->
+    <aside class="filters-sidebar" *ngIf="hasSearched">
+      <div class="filters-card">
+        <h3>Filters</h3>
+
+        <div class="filter-section">
+          <h4>Bus Type</h4>
+          <label class="radio-option">
+            <input type="radio" [(ngModel)]="selectedBusType" name="busType" [value]="''" (change)="executeSearch()" />
+            All Bus Types
+          </label>
+          <label class="radio-option" *ngFor="let type of availableBusTypes">
+            <input type="radio" [(ngModel)]="selectedBusType" name="busType" [value]="type.value" (change)="executeSearch()" />
+            {{ type.label }}
+          </label>
+        </div>
+
+        <div class="filter-section">
+          <h4>Amenities</h4>
+          <div class="amenities-grid">
+            <button
+              type="button"
+              class="amenity-chip"
+              *ngFor="let a of popularAmenities"
+              [class.active]="isAmenitySelected(a)"
+              (click)="toggleAmenity(a)">
+              {{ a }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Search Results Section -->
+    <main class="results-section">
+      <!-- Error Message -->
+      <div class="alert alert-danger" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="loading">
+        <div class="spinner"></div>
+        <p>Searching for real-time bus schedules...</p>
+      </div>
+
+      <!-- Zero Results State -->
+      <div class="empty-state" *ngIf="!loading && hasSearched && filteredResults.length === 0 && !errorMessage">
+        <div class="empty-icon">&#128652;</div>
+        <h3>No buses found for this route and date</h3>
+        <p>Try selecting a different date or clearing the bus type/amenity filters.</p>
+      </div>
+
+      <!-- Results List -->
+      <div class="results-list" *ngIf="!loading && filteredResults.length > 0">
+        <div class="results-header">
+          <h2>{{ filteredResults.length }} Buses Available</h2>
+          <span class="route-header">{{ origin }} to {{ destination }} &bull; {{ travelDate }}</span>
+        </div>
+
+        <div class="bus-card" *ngFor="let bus of filteredResults">
+          <div class="bus-card-left">
+            <div class="operator-row">
+              <span class="operator-name">{{ bus.operatorCompanyName }}</span>
+              <span class="rating-badge">&#9733; {{ bus.operatorRating || '4.5' }}</span>
+              <span class="bus-type-tag">{{ bus.busType }}</span>
+            </div>
+
+            <div class="timing-row">
+              <div class="time-block">
+                <span class="time">{{ formatTime(bus.departureTime) }}</span>
+                <span class="city">{{ bus.origin }}</span>
+              </div>
+              <div class="duration-block">
+                <span class="duration">{{ formatDuration(bus.durationMinutes) }}</span>
+                <div class="route-line"></div>
+                <span class="stops-count">{{ bus.boardingPointsCount }} Boarding Points</span>
+              </div>
+              <div class="time-block">
+                <span class="time">{{ formatTime(bus.arrivalTime) }}</span>
+                <span class="city">{{ bus.destination }}</span>
+              </div>
+            </div>
+
+            <div class="amenities-row" *ngIf="bus.amenities && bus.amenities.length > 0">
+              <span class="amenity-badge" *ngFor="let a of bus.amenities">{{ a }}</span>
+            </div>
+          </div>
+
+          <div class="bus-card-right">
+            <div class="price-block">
+              <span class="price-label">Starting from</span>
+              <span class="price-value">₹{{ bus.startingPrice }}</span>
+            </div>
+            <div class="seats-left-block">
+              <span class="seats-count" [class.few-seats]="bus.availableSeatsCount <= 5">
+                {{ bus.availableSeatsCount }} Seats Available
+              </span>
+            </div>
+            <button type="button" class="view-seats-btn" (click)="viewSeats(bus.scheduleId)">
+              View Live Seats Map &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>

@@ -1,0 +1,90 @@
+<div class="seat-map-card">
+  <div class="seat-map-header">
+    <div class="title-section">
+      <h4>Interactive Seat Map</h4>
+      <p class="subtitle">{{ seatMap.busNumber }} &bull; {{ seatMap.availableSeatsCount }} seats available</p>
+    </div>
+
+    <!-- Countdown Timer when locked -->
+    <div class="timer-badge" *ngIf="countdownSeconds > 0">
+      <span class="timer-icon">&#9201;</span>
+      <span class="timer-text">Seats held for: <strong>{{ formatTime(countdownSeconds) }}</strong></span>
+    </div>
+
+    <!-- Deck Switcher -->
+    <div class="deck-toggle" *ngIf="seatMap?.hasLowerDeck && seatMap?.hasUpperDeck">
+      <button
+        type="button"
+        class="toggle-btn"
+        [class.active]="activeDeck === 'LOWER'"
+        (click)="toggleDeck('LOWER')">
+        Lower Deck ({{ seatMap.lowerDeckSeats.length }})
+      </button>
+      <button
+        type="button"
+        class="toggle-btn"
+        [class.active]="activeDeck === 'UPPER'"
+        (click)="toggleDeck('UPPER')">
+        Upper Deck ({{ seatMap.upperDeckSeats.length }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="seat-legend">
+    <div class="legend-item"><span class="legend-box available"></span> Available</div>
+    <div class="legend-item"><span class="legend-box selected"></span> Selected</div>
+    <div class="legend-item"><span class="legend-box locked"></span> Processing</div>
+    <div class="legend-item"><span class="legend-box booked"></span> Booked</div>
+    <div class="legend-item"><span class="legend-box blocked"></span> Reserved</div>
+  </div>
+
+  <!-- Bus Layout Frame -->
+  <div class="bus-chassis">
+    <div class="bus-driver-cabin">
+      <span class="steering-wheel" title="Front of Bus">&#9095; Driver</span>
+    </div>
+
+    <div class="seats-layout-grid">
+      <div class="grid-row" *ngFor="let r of getGridRows()">
+        <div class="seat-cell" *ngFor="let c of getGridCols()">
+          <ng-container *ngIf="getSeatAt(r, c) as seat; else emptySpace">
+            <button
+              type="button"
+              class="seat-btn"
+              [class.seater]="seat.seatType === 'SEATER'"
+              [class.sleeper]="seat.seatType === 'SLEEPER'"
+              [class.available]="seat.status === 'AVAILABLE' && !isSeatSelected(seat.seatNumber)"
+              [class.selected]="isSeatSelected(seat.seatNumber)"
+              [class.locked]="seat.status === 'LOCKED' && !isSeatSelected(seat.seatNumber)"
+              [class.booked]="seat.status === 'BOOKED'"
+              [class.blocked]="seat.status === 'BLOCKED'"
+              [disabled]="seat.status !== 'AVAILABLE'"
+              (click)="onSeatClick(seat)"
+              [title]="seat.seatNumber + ' - ' + seat.seatType + ' (₹' + seat.totalAmount + ')'">
+              <span class="seat-number">{{ seat.seatNumber }}</span>
+              <span class="seat-price">₹{{ seat.totalAmount }}</span>
+            </button>
+          </ng-container>
+          <ng-template #emptySpace>
+            <div class="aisle-space"></div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selection summary footer -->
+  <div class="seat-map-footer" *ngIf="selectedSeatsList.length > 0">
+    <div class="selected-info">
+      <span class="selected-label">Selected Seats ({{ selectedSeatsList.length }}):</span>
+      <span class="seat-tag" *ngFor="let s of selectedSeatsList">
+        {{ s.seatNumber }} (₹{{ s.totalAmount }})
+      </span>
+    </div>
+    <div class="selected-total">
+      <span class="total-label">Subtotal:</span>
+      <span class="total-price">₹{{ totalSelectedAmount }}</span>
+    </div>
+  </div>
+</div>

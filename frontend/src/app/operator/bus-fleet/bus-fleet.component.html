@@ -1,0 +1,115 @@
+<div class="fleet-container">
+  <div class="page-header">
+    <div>
+      <h1>Bus Fleet Management</h1>
+      <p class="subtitle">Register new buses, configure deck layouts, amenities, and fleet maintenance</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+      + Register New Bus
+    </button>
+  </div>
+
+  <div class="table-card">
+    <table class="fleet-table" *ngIf="!loading && buses.length > 0">
+      <thead>
+        <tr>
+          <th>Bus Number</th>
+          <th>Registration No.</th>
+          <th>Bus Type</th>
+          <th>Total Seats</th>
+          <th>Decks</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let b of buses">
+          <td><strong>{{ b.busNumber }}</strong></td>
+          <td><code>{{ b.registrationNumber }}</code></td>
+          <td><span class="type-pill">{{ b.busType }}</span></td>
+          <td>{{ b.totalSeats }} Seats</td>
+          <td>
+            <span *ngIf="b.hasLowerDeck">Lower</span>
+            <span *ngIf="b.hasLowerDeck && b.hasUpperDeck"> + </span>
+            <span *ngIf="b.hasUpperDeck">Upper</span>
+          </td>
+          <td>
+            <span class="status-badge" [class.active]="b.status === 'ACTIVE'" [class.maint]="b.status === 'MAINTENANCE'">
+              {{ b.status }}
+            </span>
+          </td>
+          <td>
+            <button type="button" class="action-btn delete" (click)="deleteBus(b)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="empty-state" *ngIf="!loading && buses.length === 0">
+      <p>No buses registered in your fleet yet. Click "+ Register New Bus" to add one.</p>
+    </div>
+  </div>
+
+  <!-- Create Bus Modal -->
+  <div class="modal-overlay" *ngIf="showCreateModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Register New Bus</h2>
+        <button type="button" class="close-btn" (click)="closeCreateModal()">&times;</button>
+      </div>
+
+      <form (ngSubmit)="submitCreateBus()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bus Number</label>
+            <input type="text" [(ngModel)]="newBus.busNumber" name="busNumber" placeholder="e.g. BUS-101" required />
+          </div>
+          <div class="form-group">
+            <label>Registration Number</label>
+            <input type="text" [(ngModel)]="newBus.registrationNumber" name="registrationNumber" placeholder="e.g. DL-01-AB-1234" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bus Type</label>
+            <select [(ngModel)]="newBus.busType" name="busType">
+              <option *ngFor="let t of availableBusTypes" [value]="t">{{ t }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Total Capacity (Seats)</label>
+            <input type="number" [(ngModel)]="newBus.totalSeats" name="totalSeats" min="1" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group checkbox-group">
+            <label><input type="checkbox" [(ngModel)]="newBus.hasLowerDeck" name="hasLowerDeck" /> Has Lower Deck</label>
+          </div>
+          <div class="form-group checkbox-group">
+            <label><input type="checkbox" [(ngModel)]="newBus.hasUpperDeck" name="hasUpperDeck" /> Has Upper Deck</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Amenities</label>
+          <div class="amenity-input-row">
+            <input type="text" [(ngModel)]="amenityInput" name="amenityInput" placeholder="e.g. Water Bottle, WiFi" />
+            <button type="button" class="btn btn-secondary" (click)="addAmenity()">Add</button>
+          </div>
+          <div class="tags-container">
+            <span class="amenity-tag" *ngFor="let a of newBus.amenities; let i = index">
+              {{ a }} <button type="button" (click)="removeAmenity(i)">&times;</button>
+            </span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Bus</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

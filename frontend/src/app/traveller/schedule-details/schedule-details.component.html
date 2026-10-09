@@ -1,0 +1,133 @@
+<div class="schedule-details-container" *ngIf="!loading && scheduleDetail">
+  <!-- Top Navigation & Summary Header -->
+  <div class="details-top-bar">
+    <button type="button" class="back-link" (click)="backToSearch()">
+      &larr; Back to Search Results
+    </button>
+    <div class="trip-quick-title">
+      <h2>{{ scheduleDetail.origin }} &rarr; {{ scheduleDetail.destination }}</h2>
+      <span class="trip-date">{{ scheduleDetail.scheduleDate }} &bull; {{ scheduleDetail.operatorCompanyName }}</span>
+    </div>
+  </div>
+
+  <div class="details-layout-grid">
+    <!-- Left Column: Bus Info & Boarding Points -->
+    <div class="left-column">
+      <!-- Bus Info Card -->
+      <div class="info-card">
+        <div class="card-header">
+          <h3>{{ scheduleDetail.busNumber }}</h3>
+          <span class="bus-badge">{{ scheduleDetail.busType }}</span>
+        </div>
+
+        <div class="timing-strip">
+          <div class="time-col">
+            <span class="time">{{ formatTime(scheduleDetail.departureTime) }}</span>
+            <span class="city">{{ scheduleDetail.origin }}</span>
+          </div>
+          <div class="duration-col">
+            <span class="duration-text">{{ formatDuration(scheduleDetail.durationMinutes) }}</span>
+            <span class="dist">{{ scheduleDetail.distanceKm }} km</span>
+          </div>
+          <div class="time-col">
+            <span class="time">{{ formatTime(scheduleDetail.arrivalTime) }}</span>
+            <span class="city">{{ scheduleDetail.destination }}</span>
+          </div>
+        </div>
+
+        <!-- Amenities -->
+        <div class="amenities-section" *ngIf="scheduleDetail.amenities && scheduleDetail.amenities.length > 0">
+          <h4>Amenities Provided</h4>
+          <div class="amenity-tags">
+            <span class="tag" *ngFor="let a of scheduleDetail.amenities">{{ a }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Boarding & Dropping Points Card -->
+      <div class="info-card" *ngIf="scheduleDetail.boardingPoints.length > 0 || scheduleDetail.droppingPoints.length > 0">
+        <h3>Boarding & Dropping Points</h3>
+
+        <div class="points-group" *ngIf="scheduleDetail.boardingPoints.length > 0">
+          <h4>Select Boarding Point</h4>
+          <div class="point-option" *ngFor="let p of scheduleDetail.boardingPoints">
+            <label>
+              <input type="radio" [(ngModel)]="selectedBoardingPoint" name="boardingPoint" [value]="p.pointName" />
+              <span class="point-name">{{ p.pointName }}</span>
+              <span class="landmark" *ngIf="p.landmark">({{ p.landmark }})</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="points-group" *ngIf="scheduleDetail.droppingPoints.length > 0">
+          <h4>Select Dropping Point</h4>
+          <div class="point-option" *ngFor="let p of scheduleDetail.droppingPoints">
+            <label>
+              <input type="radio" [(ngModel)]="selectedDroppingPoint" name="droppingPoint" [value]="p.pointName" />
+              <span class="point-name">{{ p.pointName }}</span>
+              <span class="landmark" *ngIf="p.landmark">({{ p.landmark }})</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Interactive Seat Map & Hold Summary -->
+    <div class="right-column">
+      <!-- Seat Map Widget Component -->
+      <app-seat-map
+        *ngIf="scheduleDetail.seatMap"
+        [seatMap]="scheduleDetail.seatMap"
+        [lockExpiresAt]="lockResult?.lockExpiresAt"
+        (seatSelected)="onSeatSelectionChanged($event)"
+        (lockExpired)="onLockExpired()">
+      </app-seat-map>
+
+      <!-- Lock Confirmation Box -->
+      <div class="lock-success-banner" *ngIf="lockResult">
+        <div class="banner-icon">&#10004;</div>
+        <div class="banner-body">
+          <h4>Seats Held Successfully!</h4>
+          <p>Lock Token: <code>{{ lockResult.lockToken }}</code></p>
+          <p>Seats: <strong>{{ lockResult.lockedSeats.join(', ') }}</strong></p>
+          <p class="expiry-note">Complete checkout with Central Booking Service before expiry.</p>
+        </div>
+      </div>
+
+      <!-- Hold Action Bar -->
+      <div class="action-card" *ngIf="!lockResult">
+        <div class="selection-summary">
+          <div class="summary-line">
+            <span>Selected Seats:</span>
+            <strong>{{ selectedSeats.length > 0 ? selectedSeats.length + ' seat(s)' : 'None selected' }}</strong>
+          </div>
+          <div class="summary-line" *ngIf="selectedSeats.length > 0">
+            <span>Seats:</span>
+            <span>{{ selectedSeatNumbersJoined }}</span>
+          </div>
+          <div class="summary-line total-line">
+            <span>Total Fare:</span>
+            <span class="total-val">₹{{ totalAmount }}</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="hold-seats-btn"
+          [disabled]="selectedSeats.length === 0 || lockingSeats"
+          (click)="lockAndHoldSeats()">
+          {{ lockingSeats ? 'Locking Seats...' : 'Hold & Proceed to Booking (' + selectedSeats.length + ' Seats)' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="spinner"></div>
+  <p>Loading real-time schedule & seat layout...</p>
+</div>
+
+<div class="alert alert-danger" *ngIf="errorMessage">
+  {{ errorMessage }}
+</div>

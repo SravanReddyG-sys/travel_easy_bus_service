@@ -1,0 +1,125 @@
+<div class="operator-dashboard-container">
+  <!-- Top Bar -->
+  <header class="dashboard-header">
+    <div>
+      <h1>Operator Command Center</h1>
+      <p class="company-sub" *ngIf="summary">{{ summary.companyName }} &bull; Fleet & Schedule Operations</p>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="action-buttons">
+      <button type="button" class="btn btn-primary" (click)="navigateTo('/operator/buses')">Manage Buses</button>
+      <button type="button" class="btn btn-secondary" (click)="navigateTo('/operator/routes')">Manage Routes</button>
+      <button type="button" class="btn btn-accent" (click)="navigateTo('/operator/schedules')">Manage Schedules</button>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading operator fleet metrics...</p>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <div class="dashboard-content" *ngIf="!loading && summary">
+    <!-- Top 4 KPI Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon buses-icon">&#128652;</div>
+        <div class="kpi-info">
+          <span class="kpi-title">Active Buses</span>
+          <span class="kpi-value">{{ summary.activeBuses }} <small>/ {{ summary.totalBuses }}</small></span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon routes-icon">&#128506;</div>
+        <div class="kpi-info">
+          <span class="kpi-title">Active Routes</span>
+          <span class="kpi-value">{{ summary.activeRoutes }} <small>/ {{ summary.totalRoutes }}</small></span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon occupancy-icon">&#128101;</div>
+        <div class="kpi-info">
+          <span class="kpi-title">Fleet Occupancy</span>
+          <span class="kpi-value">{{ summary.occupancyRatePercentage }}%</span>
+          <span class="kpi-subtext">{{ summary.totalSeatsBooked }} / {{ summary.totalSeatsCapacity }} seats</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon revenue-icon">&#8377;</div>
+        <div class="kpi-info">
+          <span class="kpi-title">Gross Revenue</span>
+          <span class="kpi-value">₹{{ summary.totalRevenue }}</span>
+          <span class="kpi-subtext">{{ summary.currency }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Sections Grid: Route Analytics + Live Booking Feed -->
+    <div class="analytics-grid">
+      <!-- Route Revenue Analytics Card -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3>Route Performance & Revenue</h3>
+        </div>
+        <div class="table-responsive" *ngIf="revenueStats.length > 0; else noRevenue">
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>Route Code</th>
+                <th>Origin &rarr; Destination</th>
+                <th>Schedules</th>
+                <th>Booked Seats</th>
+                <th>Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let stat of revenueStats">
+                <td><strong>{{ stat.routeCode }}</strong></td>
+                <td>{{ stat.origin }} &rarr; {{ stat.destination }}</td>
+                <td>{{ stat.schedulesCount }}</td>
+                <td>{{ stat.totalBookedSeats }}</td>
+                <td class="revenue-cell">₹{{ stat.totalRevenue }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noRevenue>
+          <p class="empty-text">No route revenue recorded yet.</p>
+        </ng-template>
+      </div>
+
+      <!-- Live Booking Feed Card -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3>Live Booking Activity Feed</h3>
+          <span class="live-dot">&#9679; Real-Time</span>
+        </div>
+        <div class="feed-list" *ngIf="liveFeed.length > 0; else noFeed">
+          <div class="feed-item" *ngFor="let f of liveFeed">
+            <div class="feed-badge" [class.booked]="f.status === 'BOOKED'" [class.locked]="f.status === 'LOCKED'">
+              {{ f.status }}
+            </div>
+            <div class="feed-info">
+              <span class="feed-route">{{ f.busNumber }} &bull; Seat {{ f.seatNumber }}</span>
+              <span class="feed-ref">{{ f.bookingReference }} &bull; {{ f.routeSummary }}</span>
+            </div>
+            <div class="feed-amount">
+              ₹{{ f.amount }}
+            </div>
+          </div>
+        </div>
+        <ng-template #noFeed>
+          <p class="empty-text">No live bookings or seat holds recorded yet.</p>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>

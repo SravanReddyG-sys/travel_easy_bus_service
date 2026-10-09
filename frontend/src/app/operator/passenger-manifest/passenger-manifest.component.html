@@ -1,0 +1,96 @@
+<div class="manifest-container" *ngIf="!loading && manifest">
+  <!-- Top Navigation & Header -->
+  <div class="manifest-header">
+    <button type="button" class="back-link" (click)="backToSchedules()">
+      &larr; Back to Schedules
+    </button>
+    <div class="trip-title">
+      <h1>Passenger Roster & Manifest</h1>
+      <p class="subtitle">{{ manifest.busNumber }} &bull; {{ manifest.origin }} &rarr; {{ manifest.destination }} &bull; {{ manifest.scheduleDate }}</p>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-badge">
+      <span class="label">Total Seats</span>
+      <span class="value">{{ manifest.totalSeats }}</span>
+    </div>
+    <div class="kpi-badge success">
+      <span class="label">Booked</span>
+      <span class="value">{{ manifest.bookedSeatsCount }}</span>
+    </div>
+    <div class="kpi-badge warning">
+      <span class="label">Locked / In-Progress</span>
+      <span class="value">{{ manifest.lockedSeatsCount }}</span>
+    </div>
+    <div class="kpi-badge info">
+      <span class="label">Available</span>
+      <span class="value">{{ manifest.availableSeatsCount }}</span>
+    </div>
+    <div class="kpi-badge danger">
+      <span class="label">Blocked</span>
+      <span class="value">{{ manifest.blockedSeatsCount }}</span>
+    </div>
+    <div class="kpi-badge revenue">
+      <span class="label">Gross Revenue</span>
+      <span class="value">₹{{ manifest.grossRevenue }}</span>
+    </div>
+  </div>
+
+  <!-- Seat Roster Table -->
+  <div class="table-card">
+    <table class="roster-table">
+      <thead>
+        <tr>
+          <th>Seat</th>
+          <th>Deck</th>
+          <th>Seat Type</th>
+          <th>Status</th>
+          <th>Booking Reference / Session</th>
+          <th>Fare</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of manifest.seatRoster">
+          <td><strong>{{ s.seatNumber }}</strong></td>
+          <td>{{ s.deck }}</td>
+          <td>{{ s.seatType }}</td>
+          <td>
+            <span class="status-badge"
+              [class.available]="s.status === 'AVAILABLE'"
+              [class.booked]="s.status === 'BOOKED'"
+              [class.locked]="s.status === 'LOCKED'"
+              [class.blocked]="s.status === 'BLOCKED'">
+              {{ s.status }}
+            </span>
+          </td>
+          <td>
+            <code *ngIf="s.bookingReference">{{ s.bookingReference }}</code>
+            <span class="locked-session" *ngIf="!s.bookingReference && s.lockedBySession">
+              Held: {{ s.lockedBySession }}
+            </span>
+            <span class="empty-val" *ngIf="!s.bookingReference && !s.lockedBySession">-</span>
+          </td>
+          <td>₹{{ s.seatFare }}</td>
+          <td>
+            <button
+              type="button"
+              class="block-toggle-btn"
+              *ngIf="s.status === 'AVAILABLE' || s.status === 'BLOCKED'"
+              [class.unblock]="s.status === 'BLOCKED'"
+              (click)="toggleBlockSeat(s)">
+              {{ s.status === 'BLOCKED' ? 'Unblock Seat' : 'Block Seat' }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="spinner"></div>
+  <p>Loading passenger manifest & seat inventory...</p>
+</div>

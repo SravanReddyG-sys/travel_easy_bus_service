@@ -1,0 +1,94 @@
+server:
+  port: ${SERVER_PORT:8081}
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: traveleasy-bus-service
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/bus_db}
+    username: ${DB_USERNAME:traveleasy_user}
+    password: ${DB_PASSWORD:traveleasy_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      idle-timeout: 30000
+      pool-name: BusHikariCP
+      max-lifetime: 2000000
+      connection-timeout: 30000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        show_sql: false
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: false
+    locations: classpath:db/migration
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+    default-property-inclusion: non_null
+
+# Security & JWT Properties
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:TravelEasyBusServiceSuperSecretKey2026MustBeAtLeast256BitsLongForHMACSHA256!}
+      expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
+      issuer: ${JWT_ISSUER:traveleasy-auth-service}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000}
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+      allowed-headers: "*"
+      allow-credentials: true
+
+  # Central Services Integration Configuration (Contracts)
+  integration:
+    booking:
+      base-url: ${BOOKING_SERVICE_URL:http://localhost:8082}
+      timeout-ms: ${BOOKING_SERVICE_TIMEOUT_MS:5000}
+      mock-mode: ${BOOKING_SERVICE_MOCK_MODE:true}
+    auth:
+      base-url: ${AUTH_SERVICE_URL:http://localhost:8080}
+    seat-lock:
+      default-ttl-minutes: ${SEAT_LOCK_TTL_MINUTES:10}
+
+# Actuator Health & Metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+
+# OpenAPI / Swagger
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha

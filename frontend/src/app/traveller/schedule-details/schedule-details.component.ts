@@ -1,0 +1,126 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { BusApiService } from '../../core/services/bus-api.service';
+import { TravellerScheduleDetail } from '../../models/schedule.model';
+import { ScheduleSeatItem, LockSeatsResponse } from '../../models/seat.model';
+import { SeatMapComponent } from '../../shared/components/seat-map/seat-map.component';
+
+@Component({
+  selector: 'app-schedule-details',
+  standalone: true,
+  imports: [CommonModule, FormsModule, SeatMapComponent],
+  templateUrl: './schedule-details.component.html',
+  styleUrls: ['./schedule-details.component.scss']
+})
+export class ScheduleDetailsComponent implements OnInit {
+  scheduleId = '';
+  scheduleDetail: TravellerScheduleDetail | null = null;
+  loading = true;
+  errorMessage = '';
+
+  selectedSeats: ScheduleSeatItem[] = [];
+  lockingSeats = false;
+  lockResult: LockSeatsResponse | null = null;
+  selectedBoardingPoint = '';
+  selectedDroppingPoint = '';
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private busApiService: BusApiService
+  ) {}
+
+  ngOnInit(): void {
+    this.scheduleId = this.route.snapshot.paramMap.get('id') || '';
+    if (this.scheduleId) {
+      this.loadScheduleDetails();
+    } else {
+      this.errorMessage = 'Invalid schedule ID';
+      this.loading = false;
+    }
+  }
+
+  loadScheduleDetails(): void {
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.busApiService.getTravellerScheduleDetails(this.scheduleId).subscribe({
+      next: (data) => {
+        this.scheduleDetail = data;
+        if (data.boardingPoints && data.boardingPoints.length > 0) {
+          this.selectedBoardingPoint = data.boardingPoints[0].pointName;
+        }
+        if (data.droppingPoints && data.droppingPoints.length > 0) {
+          this.selectedDroppingPoint = data.droppingPoints[0].pointName;
+        }
+        this.loading = false;
+      },
+      error: (err) => {
+        this.errorMessage = err.error?.message || 'Failed to load schedule details.';
+        this.loading = false;
+      }
+    });
+  }
+
+  onSeatSelectionChanged(seats: ScheduleSeatItem[]): void {
+    this.selectedSeats = seats;
+  }
+
+  get selectedSeatNumbersJoined(): string {
+    return this.selectedSeats.map(s => s.seatNumber).join(', ');
+  }
+
+  onLockExpired(): void {
+    alert('Your seat hold has expired. The seats have been released back to general inventory.');
+    this.lockResult = null;
+    this.selectedSeats = [];
+    this.loadScheduleDetails();
+  }
+
+  get totalAmount(): number {
+    return this.selectedSeats.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+  }
+
+  lockAndHoldSeats(): void {
+    if (this.selectedSeats.length === 0) {
+      alert('Please select at least 1 seat to hold.');
+      return;
+    }
+
+    this.lockingSeats = true;
+    const seatNumbers = this.selectedSeats.map(s => s.seatNumber);
+
+    this.busApiService.lockSeats(this.scheduleId, {
+      seatNumbers,
+      ttlMinutes: 10
+    }).subscribe({
+      next: (res) => {
+        this.lockResult = res;
+        this.lockingSeats = false;
+      },
+      error: (err) => {
+        alert(err.error?.message || 'Seat conflict detected. One or more seats may have been locked by another user.');
+        this.lockingSeats = false;
+        this.loadScheduleDetails();
+      }
+    });
+  }
+
+  backToSearch(): void {
+    this.router.navigate(['/traveller/search']);
+  }
+
+  formatTime(dateTimeStr: string): string {
+    if (!dateTimeStr) return '';
+    const date = new Date(dateTimeStr);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  formatDuration(minutes: number): string {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m > 0 ? m + 'm' : ''}`;
+  }
+}
