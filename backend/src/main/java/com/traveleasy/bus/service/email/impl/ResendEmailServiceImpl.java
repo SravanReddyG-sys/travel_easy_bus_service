@@ -111,12 +111,17 @@ public class ResendEmailServiceImpl implements ResendEmailService {
                         .build();
             } else {
                 log.warn("[Resend] Failed with status [{}]: {}", statusCode, responseBody);
+                String friendlyMessage = "Resend returned HTTP " + statusCode + ": " + responseBody;
+                if ((statusCode == 403 || statusCode == 422) && responseBody != null && responseBody.contains("only send testing emails")) {
+                    friendlyMessage = "Resend Free-Tier Restriction: Your current Resend API key is registered to 'sneha.23mic7257@vitapstudent.ac.in'. Resend's free tier only permits sending emails to the account owner (sneha.23mic7257@vitapstudent.ac.in). To send to '" + toEmail + "', please use a Resend API key created from '" + toEmail + "' or verify a custom domain at resend.com/domains.";
+                }
+
                 return EmailSendResponse.builder()
                         .id("err_" + UUID.randomUUID())
                         .status("FAILED")
                         .recipient(toEmail)
                         .subject(subject)
-                        .message("Resend returned HTTP " + statusCode + ": " + responseBody)
+                        .message(friendlyMessage)
                         .resendConfigured(true)
                         .build();
             }

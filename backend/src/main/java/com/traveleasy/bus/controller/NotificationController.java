@@ -60,6 +60,12 @@ public class NotificationController {
             @Valid @RequestBody BookingConfirmationEmailRequest request) {
         log.info("Dispatching booking confirmation ticket email to [{}] for ref [{}]", request.getToEmail(), request.getBookingReference());
         EmailSendResponse response = resendEmailService.sendBookingConfirmationEmail(request);
+
+        if ("FAILED".equalsIgnoreCase(response.getStatus())) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(response.getMessage(), response));
+        }
+
         return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
     }
 }

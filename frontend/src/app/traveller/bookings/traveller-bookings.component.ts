@@ -95,7 +95,11 @@ export class TravellerBookingsComponent implements OnInit {
       ? this.authService.currentUser.email
       : '';
 
-    const email = prompt('Enter your Gmail / email address to receive your e-ticket via Resend:', defaultEmail);
+    const email = prompt(
+      'Enter email address to receive your e-ticket via Resend:\n' +
+      '(Note: Your current Resend free API key delivers to sneha.23mic7257@vitapstudent.ac.in. To send to another email, please provide an API key for that email):',
+      defaultEmail || 'sneha.23mic7257@vitapstudent.ac.in'
+    );
     if (!email || !email.includes('@')) {
       if (email !== null) alert('Please enter a valid email address.');
       return;
@@ -119,11 +123,12 @@ export class TravellerBookingsComponent implements OnInit {
     }).subscribe({
       next: (res) => {
         this.sendingEmailForId = null;
-        this.showNotification(`📧 Ticket sent via Resend to ${email} (${res?.status || 'SENT'})!`);
+        this.showNotification(`📧 Ticket successfully sent via Resend to ${email}!`);
       },
       error: (err) => {
         this.sendingEmailForId = null;
-        alert(err.error?.message || 'Failed to dispatch email via Resend.');
+        const msg = err.error?.message || err.message || 'Failed to dispatch email via Resend.';
+        alert(msg);
       }
     });
   }
