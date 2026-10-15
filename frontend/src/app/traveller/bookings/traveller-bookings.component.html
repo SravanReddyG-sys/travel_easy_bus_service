@@ -195,6 +195,16 @@
               &#127915; View Ticket
             </button>
 
+            <!-- Resend Email Ticket -->
+            <button
+              type="button"
+              class="btn-action btn-email-ticket"
+              (click)="sendEmailTicket(booking)"
+              [disabled]="sendingEmailForId === booking.bookingId"
+              title="Deliver e-ticket straight to your Gmail inbox via Resend">
+              {{ sendingEmailForId === booking.bookingId ? 'Sending...' : '📧 Email Ticket' }}
+            </button>
+
             <!-- Cancel Button -->
             <button
               type="button"

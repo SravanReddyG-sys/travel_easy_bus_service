@@ -94,6 +94,41 @@ export class BusApiService {
   }
 
   // ==========================================
+  // RESEND EMAIL NOTIFICATIONS (resend.com)
+  // ==========================================
+
+  sendBookingConfirmationEmail(payload: {
+    toEmail: string;
+    passengerName: string;
+    bookingReference: string;
+    busNumber: string;
+    operatorName: string;
+    origin: string;
+    destination: string;
+    travelDate: string;
+    departureTime: string;
+    seats: string[];
+    totalAmount: number;
+    boardingPoint?: string;
+    droppingPoint?: string;
+  }): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/notifications/email/booking-confirmation`, payload)
+      .pipe(map(res => res.data));
+  }
+
+  sendTestEmail(toEmail: string, subject?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/notifications/email/test`, {
+      to: toEmail,
+      subject: subject || 'Test Email from TravelEasy via Resend'
+    }).pipe(map(res => res.data));
+  }
+
+  getResendEmailStatus(): Observable<any> {
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/notifications/email/status`)
+      .pipe(map(res => res.data));
+  }
+
+  // ==========================================
   // OPERATOR FLEET & ROUTE MANAGEMENT
   // ==========================================
 

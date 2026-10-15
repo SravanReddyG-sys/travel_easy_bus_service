@@ -91,6 +91,9 @@
           <p>Lock Token: <code>{{ lockResult.lockToken }}</code></p>
           <p>Seats: <strong>{{ lockResult.lockedSeats.join(', ') }}</strong></p>
           <p class="expiry-note">Complete checkout with Central Booking Service before expiry.</p>
+          <div *ngIf="authService.isLoggedIn() && authService.currentUser.email" style="background: #f0fdf4; border-left: 3px solid #16a34a; padding: 6px 10px; margin: 8px 0; border-radius: 4px; font-size: 13px; color: #166534;">
+            📧 E-ticket confirmation dispatched via <strong>Resend</strong> to <strong>{{ authService.currentUser.email }}</strong>
+          </div>
           <div class="banner-actions">
             <button type="button" class="btn-go-to-bookings" (click)="goToBookings()">
               &#127915; View in My Bookings &rarr;

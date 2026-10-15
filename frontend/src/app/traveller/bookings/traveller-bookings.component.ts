@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BookingService } from '../../core/services/booking.service';
+import { BusApiService } from '../../core/services/bus-api.service';
+import { AuthService } from '../../core/services/auth.service';
 import { BookingRecord, BookingStatus } from '../../models/booking.model';
 
 @Component({
@@ -18,9 +20,12 @@ export class TravellerBookingsComponent implements OnInit {
   searchQuery: string = '';
   selectedBookingForView: BookingRecord | null = null;
   notificationMessage: string = '';
+  sendingEmailForId: string | null = null;
 
   constructor(
     private bookingService: BookingService,
+    private busApiService: BusApiService,
+    public authService: AuthService,
     private router: Router
   ) {}
 
@@ -83,6 +88,44 @@ export class TravellerBookingsComponent implements OnInit {
 
   printTicket(): void {
     window.print();
+  }
+
+  sendEmailTicket(booking: BookingRecord): void {
+    const defaultEmail = (this.authService.isLoggedIn() && this.authService.currentUser.email)
+      ? this.authService.currentUser.email
+      : '';
+
+    const email = prompt('Enter your Gmail / email address to receive your e-ticket via Resend:', defaultEmail);
+    if (!email || !email.includes('@')) {
+      if (email !== null) alert('Please enter a valid email address.');
+      return;
+    }
+
+    this.sendingEmailForId = booking.bookingId;
+    this.busApiService.sendBookingConfirmationEmail({
+      toEmail: email.trim(),
+      passengerName: booking.passengerName || 'Traveller',
+      bookingReference: booking.bookingReference,
+      busNumber: booking.busNumber,
+      operatorName: booking.operatorCompanyName,
+      origin: booking.origin,
+      destination: booking.destination,
+      travelDate: booking.travelDate,
+      departureTime: booking.departureTime,
+      seats: booking.seats,
+      totalAmount: booking.totalAmount,
+      boardingPoint: booking.boardingPoint,
+      droppingPoint: booking.droppingPoint
+    }).subscribe({
+      next: (res) => {
+        this.sendingEmailForId = null;
+        this.showNotification(`📧 Ticket sent via Resend to ${email} (${res?.status || 'SENT'})!`);
+      },
+      error: (err) => {
+        this.sendingEmailForId = null;
+        alert(err.error?.message || 'Failed to dispatch email via Resend.');
+      }
+    });
   }
 
   createDemoBooking(): void {

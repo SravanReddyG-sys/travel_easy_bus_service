@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/schedules/*/seats/release").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/schedules/*/seats/cleanup-expired-locks").permitAll()
                         .requestMatchers("/api/v1/integration/booking/**").permitAll()
+                        .requestMatchers("/api/v1/notifications/**").permitAll()
 
                         // Operator Specific Endpoints
                         .requestMatchers("/api/v1/operator/**").hasAnyRole("OPERATOR", "ADMIN")

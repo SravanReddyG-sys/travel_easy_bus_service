@@ -12,6 +12,7 @@ import com.traveleasy.bus.security.JwtTokenProvider;
 import com.traveleasy.bus.security.SecurityUtils;
 import com.traveleasy.bus.security.UserPrincipal;
 import com.traveleasy.bus.security.UserRole;
+import com.traveleasy.bus.service.email.ResendEmailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
@@ -38,6 +40,7 @@ public class AuthController {
     private final BusOperatorRepository operatorRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ResendEmailService resendEmailService;
 
     private static final UUID DEFAULT_OPERATOR_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -153,6 +156,15 @@ public class AuthController {
 
         User savedUser = userRepository.save(newUser);
         log.info("Saved user [{}] to database with ID [{}] and role [{}]", email, savedUser.getId(), savedUser.getRole());
+
+        // Dispatch welcome email asynchronously via Resend
+        CompletableFuture.runAsync(() -> {
+            try {
+                resendEmailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getFullName(), savedUser.getRole());
+            } catch (Exception ex) {
+                log.warn("Non-critical: Welcome email delivery failed for [{}]: {}", savedUser.getEmail(), ex.getMessage());
+            }
+        });
 
         // 5. Generate signed JWT token
         String token = jwtTokenProvider.generateToken(savedUser.getId(), email, operatorId, Set.of(role));

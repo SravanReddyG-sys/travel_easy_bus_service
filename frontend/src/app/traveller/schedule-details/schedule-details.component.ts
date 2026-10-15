@@ -34,7 +34,7 @@ export class ScheduleDetailsComponent implements OnInit {
     private router: Router,
     private busApiService: BusApiService,
     private bookingService: BookingService,
-    private authService: AuthService
+    public authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -143,6 +143,32 @@ export class ScheduleDetailsComponent implements OnInit {
             createdAt: new Date().toISOString()
           };
           this.bookingService.addBooking(newBooking);
+
+          // Dispatch booking confirmation e-ticket via Resend if email is present
+          const userEmail = (this.authService.isLoggedIn() && this.authService.currentUser.email)
+            ? this.authService.currentUser.email
+            : null;
+
+          if (userEmail && userEmail.includes('@')) {
+            this.busApiService.sendBookingConfirmationEmail({
+              toEmail: userEmail,
+              passengerName: passenger,
+              bookingReference: newBooking.bookingReference,
+              busNumber: newBooking.busNumber,
+              operatorName: newBooking.operatorCompanyName,
+              origin: newBooking.origin,
+              destination: newBooking.destination,
+              travelDate: newBooking.travelDate,
+              departureTime: newBooking.departureTime,
+              seats: newBooking.seats,
+              totalAmount: newBooking.totalAmount,
+              boardingPoint: newBooking.boardingPoint,
+              droppingPoint: newBooking.droppingPoint
+            }).subscribe({
+              next: (emailRes) => console.log('Booking email delivered via Resend:', emailRes),
+              error: (err) => console.warn('Non-blocking: Resend email failed:', err)
+            });
+          }
         }
       },
       error: (err) => {

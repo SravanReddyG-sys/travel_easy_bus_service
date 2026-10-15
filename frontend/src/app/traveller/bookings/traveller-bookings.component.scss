@@ -631,6 +631,22 @@
           }
         }
 
+        &.btn-email-ticket {
+          background: #0f172a;
+          color: #f8fafc;
+          border: 1px solid #334155;
+
+          &:hover:not(:disabled) {
+            background: #1e293b;
+            border-color: #64748b;
+          }
+
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+        }
+
         &.btn-cancel {
           background: #ffffff;
           color: #dc2626;
