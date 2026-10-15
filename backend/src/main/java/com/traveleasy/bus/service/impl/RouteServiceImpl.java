@@ -97,13 +97,8 @@ public class RouteServiceImpl implements RouteService {
 
     @Override
     public PageResponse<RouteResponse> listRoutes(UUID operatorIdFilter, Boolean activeOnly, Pageable pageable) {
-        Optional<UserPrincipal> principalOpt = SecurityUtils.getCurrentUserPrincipal();
-
         Page<Route> routePage;
-        if (principalOpt.isPresent() && principalOpt.get().isOperator() && !principalOpt.get().isAdmin()) {
-            UUID authenticatedOperatorId = principalOpt.get().getOperatorId();
-            routePage = routeRepository.findByOperatorId(authenticatedOperatorId, pageable);
-        } else if (operatorIdFilter != null) {
+        if (operatorIdFilter != null) {
             routePage = routeRepository.findByOperatorId(operatorIdFilter, pageable);
         } else {
             routePage = routeRepository.findAll(pageable);

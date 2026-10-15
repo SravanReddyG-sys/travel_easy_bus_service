@@ -68,6 +68,7 @@
         <div class="form-group">
           <label>Select Route</label>
           <select [(ngModel)]="newSchedule.routeId" name="routeId" required>
+            <option value="" disabled selected>-- Choose Route --</option>
             <option *ngFor="let r of routes" [value]="r.id">{{ r.routeCode }}: {{ r.origin }} &rarr; {{ r.destination }} ({{ r.distanceKm }} km)</option>
           </select>
         </div>
