@@ -95,11 +95,8 @@ export class TravellerBookingsComponent implements OnInit {
       ? this.authService.currentUser.email
       : '';
 
-    const email = prompt(
-      'Enter email address to receive your e-ticket via Resend:\n' +
-      '(Note: Your current Resend free API key delivers to sneha.23mic7257@vitapstudent.ac.in. To send to another email, please provide an API key for that email):',
-      defaultEmail || 'sneha.23mic7257@vitapstudent.ac.in'
-    );
+    const email = prompt('Enter email address to receive your e-ticket:', defaultEmail);
+
     if (!email || !email.includes('@')) {
       if (email !== null) alert('Please enter a valid email address.');
       return;
