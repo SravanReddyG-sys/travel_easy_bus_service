@@ -130,11 +130,6 @@ export class TravellerBookingsComponent implements OnInit {
     });
   }
 
-  createDemoBooking(): void {
-    const demo = this.bookingService.createSampleBooking();
-    this.showNotification(`Created demo booking: ${demo.bookingReference} (Delhi → Jaipur)`);
-  }
-
   clearAll(): void {
     if (confirm('Clear all bookings from your device?')) {
       this.bookingService.clearAll();

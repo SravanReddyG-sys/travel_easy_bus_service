@@ -18,9 +18,6 @@
       <button type="button" class="btn-primary-action" (click)="goToSearch()">
         <span class="icon">&#128269;</span> Search Buses
       </button>
-      <button type="button" class="btn-secondary-action" (click)="createDemoBooking()" title="Add another sample booking">
-        <span class="icon">+</span> Sample Booking
-      </button>
       <button type="button" class="btn-ghost-danger" (click)="clearAll()" title="Reset all saved bookings">
         Clear All
       </button>
@@ -91,9 +88,6 @@
       <div class="empty-actions">
         <button type="button" class="btn-primary-action btn-lg" (click)="goToSearch()">
           <span class="icon">&#128269;</span> Search & Book Buses
-        </button>
-        <button type="button" class="btn-secondary-action btn-lg" *ngIf="bookings.length === 0" (click)="createDemoBooking()">
-          <span class="icon">+</span> Load Sample Booking
         </button>
       </div>
     </div>
