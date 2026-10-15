@@ -86,10 +86,20 @@ export class BusApiService {
       .pipe(map(res => res.data));
   }
 
-  releaseSeats(scheduleId: string, seatNumbers: string[], lockToken?: string): Observable<any> {
+  confirmSeats(scheduleId: string, request: {
+    seatNumbers: string[];
+    lockToken: string;
+    bookingReference: string;
+  }): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/schedules/${scheduleId}/seats/confirm`, request)
+      .pipe(map(res => res.data));
+  }
+
+  releaseSeats(scheduleId: string, seatNumbers: string[], lockToken?: string, bookingReference?: string): Observable<any> {
     return this.http.post<ApiResponse<any>>(`${this.baseUrl}/schedules/${scheduleId}/seats/release`, {
       seatNumbers,
-      lockToken
+      lockToken,
+      bookingReference
     }).pipe(map(res => res.data));
   }
 

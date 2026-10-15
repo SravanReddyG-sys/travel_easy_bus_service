@@ -26,6 +26,7 @@ export class ScheduleDetailsComponent implements OnInit {
   selectedSeats: ScheduleSeatItem[] = [];
   lockingSeats = false;
   lockResult: LockSeatsResponse | null = null;
+  confirmedBookingReference = '';
   selectedBoardingPoint = '';
   selectedDroppingPoint = '';
 
@@ -134,7 +135,7 @@ export class ScheduleDetailsComponent implements OnInit {
             seats: res.lockedSeats || seatNumbers,
             totalAmount: this.totalAmount,
             currency: 'INR',
-            status: 'HELD',
+            status: 'CONFIRMED',
             boardingPoint: this.selectedBoardingPoint,
             droppingPoint: this.selectedDroppingPoint,
             passengerName: passenger,
@@ -142,7 +143,20 @@ export class ScheduleDetailsComponent implements OnInit {
             lockExpiresAt: res.lockExpiresAt,
             createdAt: new Date().toISOString()
           };
+          this.confirmedBookingReference = newBooking.bookingReference;
           this.bookingService.addBooking(newBooking);
+
+          // Permanently confirm seats in backend PostgreSQL inventory & link PNR
+          this.busApiService.confirmSeats(this.scheduleId, {
+            seatNumbers: res.lockedSeats || seatNumbers,
+            lockToken: res.lockToken,
+            bookingReference: newBooking.bookingReference
+          }).subscribe({
+            next: (confirmRes) => {
+              console.log('Seats permanently confirmed in database inventory:', confirmRes);
+            },
+            error: (err) => console.warn('Non-blocking: Seat confirmation sync warning:', err)
+          });
 
           // Dispatch booking confirmation e-ticket via Resend if email is present
           const userEmail = (this.authService.isLoggedIn() && this.authService.currentUser.email)

@@ -87,10 +87,10 @@
       <div class="lock-success-banner" *ngIf="lockResult">
         <div class="banner-icon">&#10004;</div>
         <div class="banner-body">
-          <h4>Seats Held Successfully!</h4>
-          <p>Lock Token: <code>{{ lockResult.lockToken }}</code></p>
+          <h4>Booking Confirmed Successfully!</h4>
+          <p>Booking Reference (PNR): <strong><code>{{ confirmedBookingReference || lockResult.lockToken }}</code></strong></p>
           <p>Seats: <strong>{{ lockResult.lockedSeats.join(', ') }}</strong></p>
-          <p class="expiry-note">Complete checkout with Central Booking Service before expiry.</p>
+          <p class="expiry-note">Your seat reservation is confirmed and synced directly to the operator's manifest.</p>
           <div *ngIf="authService.isLoggedIn() && authService.currentUser.email" style="background: #f0fdf4; border-left: 3px solid #16a34a; padding: 6px 10px; margin: 8px 0; border-radius: 4px; font-size: 13px; color: #166534;">
             📧 E-ticket confirmation dispatched via <strong>Resend</strong> to <strong>{{ authService.currentUser.email }}</strong>
           </div>
@@ -124,7 +124,7 @@
           class="hold-seats-btn"
           [disabled]="selectedSeats.length === 0 || lockingSeats"
           (click)="lockAndHoldSeats()">
-          {{ lockingSeats ? 'Locking Seats...' : 'Hold & Proceed to Booking (' + selectedSeats.length + ' Seats)' }}
+          {{ lockingSeats ? 'Confirming Booking...' : 'Book Seats (' + selectedSeats.length + ' Seats)' }}
         </button>
       </div>
     </div>

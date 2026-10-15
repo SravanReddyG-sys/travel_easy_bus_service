@@ -67,6 +67,17 @@ export class TravellerBookingsComponent implements OnInit {
   cancelBooking(booking: BookingRecord): void {
     if (confirm(`Are you sure you want to cancel booking ${booking.bookingReference}?`)) {
       this.bookingService.cancelBooking(booking.bookingId);
+      if (booking.scheduleId && booking.seats && booking.seats.length > 0) {
+        this.busApiService.releaseSeats(
+          booking.scheduleId,
+          booking.seats,
+          booking.lockToken,
+          booking.bookingReference
+        ).subscribe({
+          next: () => console.log('Seats released back to inventory on backend'),
+          error: (err) => console.warn('Non-blocking: Failed to release seats on backend', err)
+        });
+      }
       this.showNotification(`Booking ${booking.bookingReference} has been cancelled.`);
     }
   }
