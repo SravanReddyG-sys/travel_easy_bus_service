@@ -91,6 +91,11 @@
           <p>Lock Token: <code>{{ lockResult.lockToken }}</code></p>
           <p>Seats: <strong>{{ lockResult.lockedSeats.join(', ') }}</strong></p>
           <p class="expiry-note">Complete checkout with Central Booking Service before expiry.</p>
+          <div class="banner-actions">
+            <button type="button" class="btn-go-to-bookings" (click)="goToBookings()">
+              &#127915; View in My Bookings &rarr;
+            </button>
+          </div>
         </div>
       </div>
 

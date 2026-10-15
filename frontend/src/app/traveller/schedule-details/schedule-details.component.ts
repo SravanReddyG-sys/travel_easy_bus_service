@@ -3,8 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BusApiService } from '../../core/services/bus-api.service';
+import { BookingService } from '../../core/services/booking.service';
+import { AuthService } from '../../core/services/auth.service';
 import { TravellerScheduleDetail } from '../../models/schedule.model';
 import { ScheduleSeatItem, LockSeatsResponse } from '../../models/seat.model';
+import { BookingRecord } from '../../models/booking.model';
 import { SeatMapComponent } from '../../shared/components/seat-map/seat-map.component';
 
 @Component({
@@ -29,7 +32,9 @@ export class ScheduleDetailsComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private busApiService: BusApiService
+    private busApiService: BusApiService,
+    private bookingService: BookingService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -95,13 +100,50 @@ export class ScheduleDetailsComponent implements OnInit {
     this.lockingSeats = true;
     const seatNumbers = this.selectedSeats.map(s => s.seatNumber);
 
+    const sessionId = this.authService.isLoggedIn()
+      ? ('user_' + (this.authService.currentUser.userId || 'guest'))
+      : ('sess_' + Math.floor(100000 + Math.random() * 900000));
+
     this.busApiService.lockSeats(this.scheduleId, {
       seatNumbers,
+      bookingSessionId: sessionId,
       ttlMinutes: 10
     }).subscribe({
       next: (res) => {
         this.lockResult = res;
         this.lockingSeats = false;
+
+        // Save into traveller's bookings history
+        if (this.scheduleDetail) {
+          const passenger = this.authService.isLoggedIn()
+            ? (this.authService.currentUser.fullName || this.authService.currentUser.email)
+            : 'Traveller Guest';
+
+          const newBooking: BookingRecord = {
+            bookingId: 'BKG-' + Math.floor(100000 + Math.random() * 900000),
+            bookingReference: 'TE-REF-' + Math.floor(1000 + Math.random() * 9000),
+            scheduleId: this.scheduleId,
+            busNumber: this.scheduleDetail.busNumber,
+            operatorCompanyName: this.scheduleDetail.operatorCompanyName,
+            busType: this.scheduleDetail.busType,
+            origin: this.scheduleDetail.origin,
+            destination: this.scheduleDetail.destination,
+            travelDate: this.scheduleDetail.scheduleDate,
+            departureTime: this.scheduleDetail.departureTime,
+            arrivalTime: this.scheduleDetail.arrivalTime,
+            seats: res.lockedSeats || seatNumbers,
+            totalAmount: this.totalAmount,
+            currency: 'INR',
+            status: 'HELD',
+            boardingPoint: this.selectedBoardingPoint,
+            droppingPoint: this.selectedDroppingPoint,
+            passengerName: passenger,
+            lockToken: res.lockToken,
+            lockExpiresAt: res.lockExpiresAt,
+            createdAt: new Date().toISOString()
+          };
+          this.bookingService.addBooking(newBooking);
+        }
       },
       error: (err) => {
         alert(err.error?.message || 'Seat conflict detected. One or more seats may have been locked by another user.');
@@ -109,6 +151,10 @@ export class ScheduleDetailsComponent implements OnInit {
         this.loadScheduleDetails();
       }
     });
+  }
+
+  goToBookings(): void {
+    this.router.navigate(['/traveller/bookings']);
   }
 
   backToSearch(): void {

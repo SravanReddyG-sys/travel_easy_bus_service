@@ -16,13 +16,14 @@ export interface AuthUser {
 export interface LoginPayload {
   email: string;
   password?: string;
-  role: 'TRAVELLER' | 'OPERATOR' | 'ADMIN';
+  role?: 'TRAVELLER' | 'OPERATOR' | 'ADMIN';
 }
 
 export interface RegisterPayload {
   fullName: string;
   email: string;
   password?: string;
+  confirmPassword?: string;
   role: 'TRAVELLER' | 'OPERATOR';
   companyName?: string;
   contactPhone?: string;
@@ -42,9 +43,7 @@ export class AuthService {
   public currentUser$: Observable<AuthUser> = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient) {
-    if (!this.currentUserSubject.value.token) {
-      this.quickLogin('OPERATOR', '00000000-0000-0000-0000-000000000001');
-    }
+    // If no stored user session, user stays logged out as guest
   }
 
   private loadStoredUser(): AuthUser {
@@ -52,19 +51,20 @@ export class AuthService {
       const stored = localStorage.getItem(AuthService.STORAGE_KEY);
       if (stored) {
         try {
-          return JSON.parse(stored);
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.token) {
+            return parsed;
+          }
         } catch (e) {
           // ignore corrupted JSON
         }
       }
     }
     return {
-      userId: '00000000-0000-0000-0000-000000000001',
-      email: 'operator@traveleasy.com',
-      fullName: 'Royal Express Travels',
-      role: 'OPERATOR',
-      operatorId: '00000000-0000-0000-0000-000000000001',
-      companyName: 'Royal Express Travels',
+      userId: '',
+      email: '',
+      fullName: 'Guest User',
+      role: 'TRAVELLER',
       token: ''
     };
   }
@@ -92,17 +92,16 @@ export class AuthService {
 
   login(payload: LoginPayload): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/auth/login`, {
-      email: payload.email,
-      password: payload.password || 'password123',
-      role: payload.role
+      email: payload.email.trim().toLowerCase(),
+      password: payload.password ? payload.password.trim() : ''
     }).pipe(
       tap((res) => {
         if (res && res.data) {
           const user: AuthUser = {
             userId: res.data.userId,
             email: res.data.email,
-            fullName: res.data.fullName || (payload.role === 'OPERATOR' ? 'Bus Operator' : 'Traveller'),
-            role: res.data.role.replace('ROLE_', '') as any,
+            fullName: res.data.fullName,
+            role: (res.data.role || 'ROLE_TRAVELLER').replace('ROLE_', '') as any,
             operatorId: res.data.operatorId,
             companyName: res.data.companyName,
             token: res.data.token
@@ -115,12 +114,12 @@ export class AuthService {
 
   register(payload: RegisterPayload): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/auth/register`, {
-      fullName: payload.fullName,
-      email: payload.email,
-      password: payload.password || 'password123',
+      fullName: payload.fullName.trim(),
+      email: payload.email.trim().toLowerCase(),
+      password: payload.password ? payload.password.trim() : '',
       role: payload.role,
-      companyName: payload.companyName,
-      contactPhone: payload.contactPhone || '+91-9876543210'
+      companyName: payload.companyName ? payload.companyName.trim() : undefined,
+      contactPhone: payload.contactPhone ? payload.contactPhone.trim() : ''
     }).pipe(
       tap((res) => {
         if (res && res.data) {
@@ -128,7 +127,7 @@ export class AuthService {
             userId: res.data.userId,
             email: res.data.email,
             fullName: res.data.fullName,
-            role: res.data.role.replace('ROLE_', '') as any,
+            role: (res.data.role || 'ROLE_TRAVELLER').replace('ROLE_', '') as any,
             operatorId: res.data.operatorId,
             companyName: res.data.companyName,
             token: res.data.token
@@ -139,38 +138,17 @@ export class AuthService {
     );
   }
 
-  quickLogin(role: 'TRAVELLER' | 'OPERATOR' | 'ADMIN', operatorId?: string, companyName?: string): void {
-    let url = `${this.baseUrl}/auth/token?role=${role}`;
-    if (operatorId) {
-      url += `&operatorId=${operatorId}`;
-    }
-
-    this.http.get<{ success: boolean; data: { token: string; email: string; operatorId: string; role: string } }>(url)
-      .subscribe({
-        next: (res) => {
-          if (res && res.data) {
-            const user: AuthUser = {
-              userId: res.data.operatorId || '00000000-0000-0000-0000-000000000001',
-              email: res.data.email,
-              fullName: role === 'OPERATOR' ? (companyName || 'Royal Express Travels') : 'Demo Traveller',
-              role,
-              operatorId: res.data.operatorId,
-              companyName: role === 'OPERATOR' ? (companyName || 'Royal Express Travels') : undefined,
-              token: res.data.token
-            };
-            this.setCurrentUser(user);
-          }
-        }
-      });
-  }
-
-  switchRole(role: 'TRAVELLER' | 'OPERATOR' | 'ADMIN', operatorId?: string): void {
-    const defaultOp = role === 'OPERATOR' ? (operatorId || '00000000-0000-0000-0000-000000000001') : undefined;
-    this.quickLogin(role, defaultOp);
+  switchRole(role: 'TRAVELLER' | 'OPERATOR' | 'ADMIN'): void {
+    const current = this.currentUserSubject.value;
+    const updated: AuthUser = {
+      ...current,
+      role
+    };
+    this.setCurrentUser(updated);
   }
 
   logout(): void {
-    const defaultTraveller: AuthUser = {
+    const defaultGuest: AuthUser = {
       userId: '',
       email: '',
       fullName: 'Guest User',
@@ -180,10 +158,10 @@ export class AuthService {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(AuthService.STORAGE_KEY);
     }
-    this.currentUserSubject.next(defaultTraveller);
+    this.currentUserSubject.next(defaultGuest);
   }
 
-  private setCurrentUser(user: AuthUser): void {
+  public setCurrentUser(user: AuthUser): void {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(AuthService.STORAGE_KEY, JSON.stringify(user));
     }

@@ -293,5 +293,30 @@
       font-size: 0.75rem;
       margin-top: 0.5rem;
     }
+
+    .banner-actions {
+      margin-top: 0.85rem;
+
+      .btn-go-to-bookings {
+        background: #16a34a;
+        color: #ffffff;
+        border: none;
+        padding: 0.55rem 1.1rem;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s;
+
+        &:hover {
+          background: #15803d;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2);
+        }
+      }
+    }
   }
 }

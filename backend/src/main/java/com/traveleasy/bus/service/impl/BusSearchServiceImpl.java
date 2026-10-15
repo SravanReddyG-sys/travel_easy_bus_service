@@ -29,10 +29,11 @@ public class BusSearchServiceImpl implements BusSearchService {
     private final ScheduleRepository scheduleRepository;
     private final ScheduleSeatInventoryRepository inventoryRepository;
     private final FareRepository fareRepository;
+    private final com.traveleasy.bus.repository.SeatRepository seatRepository;
     private final RouteMapper routeMapper;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public BusSearchPageResponse searchBuses(BusSearchRequest request) {
         log.info("Searching buses from [{}] to [{}] on date [{}] with sortBy [{}]",
                 request.getOrigin(), request.getDestination(), request.getTravelDate(), request.getSortBy());
@@ -43,6 +44,11 @@ public class BusSearchServiceImpl implements BusSearchService {
         // 1. Fetch matching active schedules
         List<Schedule> matchingSchedules = scheduleRepository.findAvailableSchedulesForSearch(
                 origin, destination, request.getTravelDate());
+
+        // Dynamic fallback: If no schedules exist for this specific date, replicate from route templates!
+        if (matchingSchedules.isEmpty()) {
+            matchingSchedules = autoReplicateSchedulesForDate(origin, destination, request.getTravelDate());
+        }
 
         if (matchingSchedules.isEmpty()) {
             return BusSearchPageResponse.builder()
@@ -273,5 +279,70 @@ public class BusSearchServiceImpl implements BusSearchService {
             case "departure_asc" -> cards.sort(Comparator.comparing(BusSearchResultCardResponse::getDepartureTime));
             default -> cards.sort(Comparator.comparing(BusSearchResultCardResponse::getDepartureTime));
         }
+    }
+
+    private List<Schedule> autoReplicateSchedulesForDate(String origin, String destination, java.time.LocalDate travelDate) {
+        log.info("Auto-replicating schedules for route [{}] -> [{}] on date [{}]", origin, destination, travelDate);
+        List<Schedule> templates = scheduleRepository.findTemplateSchedulesForRoute(origin, destination);
+        if (templates.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<UUID, Schedule> uniqueBusTemplates = new LinkedHashMap<>();
+        for (Schedule t : templates) {
+            uniqueBusTemplates.putIfAbsent(t.getBus().getId(), t);
+        }
+
+        List<Schedule> newSchedules = new ArrayList<>();
+        for (Schedule template : uniqueBusTemplates.values()) {
+            java.time.LocalDateTime depTime = java.time.LocalDateTime.of(travelDate, template.getDepartureTime().toLocalTime());
+            long durationMinutes = Duration.between(template.getDepartureTime(), template.getArrivalTime()).toMinutes();
+            if (durationMinutes <= 0) {
+                durationMinutes = 300;
+            }
+            java.time.LocalDateTime arrTime = depTime.plusMinutes(durationMinutes);
+
+            Schedule newSchedule = Schedule.builder()
+                    .bus(template.getBus())
+                    .route(template.getRoute())
+                    .operator(template.getOperator())
+                    .scheduleDate(travelDate)
+                    .departureTime(depTime)
+                    .arrivalTime(arrTime)
+                    .status(com.traveleasy.bus.enums.ScheduleStatus.SCHEDULED)
+                    .availabilityStatus(com.traveleasy.bus.enums.AvailabilityStatus.AVAILABLE)
+                    .build();
+
+            Schedule savedSchedule = scheduleRepository.save(newSchedule);
+
+            // Replicate seat inventory
+            List<com.traveleasy.bus.entity.Seat> seats = seatRepository.findByBusIdAndIsActiveTrueOrderByRowNumAscColNumAsc(template.getBus().getId());
+            for (com.traveleasy.bus.entity.Seat seat : seats) {
+                inventoryRepository.save(com.traveleasy.bus.entity.ScheduleSeatInventory.builder()
+                        .schedule(savedSchedule)
+                        .seat(seat)
+                        .status(com.traveleasy.bus.enums.SeatInventoryStatus.AVAILABLE)
+                        .build());
+            }
+
+            // Replicate fares
+            List<Fare> templateFares = fareRepository.findByScheduleId(template.getId());
+            for (Fare tf : templateFares) {
+                fareRepository.save(Fare.builder()
+                        .schedule(savedSchedule)
+                        .seatType(tf.getSeatType())
+                        .baseAmount(tf.getBaseAmount())
+                        .taxAmount(tf.getTaxAmount())
+                        .discountAmount(tf.getDiscountAmount())
+                        .totalAmount(tf.getTotalAmount())
+                        .currency(tf.getCurrency())
+                        .build());
+            }
+
+            newSchedules.add(savedSchedule);
+        }
+
+        log.info("Successfully replicated [{}] schedules for date [{}]", newSchedules.size(), travelDate);
+        return newSchedules;
     }
 }

@@ -1,0 +1,301 @@
+<div class="bookings-page-container">
+  <!-- Top Notification Toast -->
+  <div class="toast-notification" *ngIf="notificationMessage">
+    <span class="toast-icon">&#10004;</span>
+    <span class="toast-text">{{ notificationMessage }}</span>
+    <button type="button" class="toast-close" (click)="notificationMessage = ''">&times;</button>
+  </div>
+
+  <!-- Page Header -->
+  <header class="bookings-header">
+    <div class="header-titles">
+      <h1>My Bookings</h1>
+      <p class="subtitle">View and manage your bus ticket reservations, held seats, and journey details</p>
+    </div>
+
+    <!-- Header Actions (Visible only when bookings exist) -->
+    <div class="header-actions" *ngIf="bookings.length > 0">
+      <button type="button" class="btn-primary-action" (click)="goToSearch()">
+        <span class="icon">&#128269;</span> Search Buses
+      </button>
+      <button type="button" class="btn-secondary-action" (click)="createDemoBooking()" title="Add another sample booking">
+        <span class="icon">+</span> Sample Booking
+      </button>
+      <button type="button" class="btn-ghost-danger" (click)="clearAll()" title="Reset all saved bookings">
+        Clear All
+      </button>
+    </div>
+  </header>
+
+  <!-- Filter & Search Toolbar (Only visible when user has bookings) -->
+  <div class="toolbar-card" *ngIf="bookings.length > 0">
+    <div class="filter-tabs">
+      <button
+        type="button"
+        class="tab-pill"
+        [class.active]="selectedFilter === 'ALL'"
+        (click)="setFilter('ALL')">
+        All Bookings <span class="badge">{{ countAll }}</span>
+      </button>
+      <button
+        type="button"
+        class="tab-pill"
+        [class.active]="selectedFilter === 'CONFIRMED'"
+        (click)="setFilter('CONFIRMED')">
+        Confirmed <span class="badge badge-success">{{ countConfirmed }}</span>
+      </button>
+      <button
+        type="button"
+        class="tab-pill"
+        [class.active]="selectedFilter === 'HELD'"
+        (click)="setFilter('HELD')">
+        Held / Pending <span class="badge badge-warning">{{ countHeld }}</span>
+      </button>
+      <button
+        type="button"
+        class="tab-pill"
+        [class.active]="selectedFilter === 'CANCELLED'"
+        (click)="setFilter('CANCELLED')">
+        Cancelled <span class="badge badge-danger">{{ countCancelled }}</span>
+      </button>
+    </div>
+
+    <div class="search-box">
+      <span class="search-icon">&#128269;</span>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        placeholder="Search by city, PNR, or bus name..." />
+      <button type="button" class="clear-search" *ngIf="searchQuery" (click)="searchQuery = ''">&times;</button>
+    </div>
+  </div>
+
+  <!-- Main Content: Bookings List or Empty State -->
+  <div class="bookings-content">
+    <!-- EMPTY STATE -->
+    <div class="empty-state-card" *ngIf="filteredBookings.length === 0">
+      <div class="empty-icon-circle">
+        <span class="icon">&#128652;</span>
+      </div>
+
+      <h3 *ngIf="bookings.length === 0">No Bookings Found</h3>
+      <h3 *ngIf="bookings.length > 0">No Matching Bookings</h3>
+
+      <p *ngIf="bookings.length === 0">
+        You haven't booked any bus journeys yet. Explore our intercity routes, choose your favorite seat, and book with instant confirmation!
+      </p>
+      <p *ngIf="bookings.length > 0">
+        No bookings match your current filter or search criteria. Try selecting "All Bookings" or clearing your search.
+      </p>
+
+      <div class="empty-actions">
+        <button type="button" class="btn-primary-action btn-lg" (click)="goToSearch()">
+          <span class="icon">&#128269;</span> Search & Book Buses
+        </button>
+        <button type="button" class="btn-secondary-action btn-lg" *ngIf="bookings.length === 0" (click)="createDemoBooking()">
+          <span class="icon">+</span> Load Sample Booking
+        </button>
+      </div>
+    </div>
+
+    <!-- BOOKINGS LIST (When bookings exist) -->
+    <div class="bookings-grid" *ngIf="filteredBookings.length > 0">
+      <div class="booking-card" *ngFor="let booking of filteredBookings" [class]="'status-' + booking.status.toLowerCase()">
+        <!-- Card Header -->
+        <div class="card-header">
+          <div class="pnr-info">
+            <span class="pnr-label">PNR / Ref</span>
+            <strong class="pnr-code">{{ booking.bookingReference }}</strong>
+            <span class="booking-date">&bull; Booked {{ formatDate(booking.createdAt) }}</span>
+          </div>
+
+          <div class="status-badge" [class]="'badge-' + booking.status.toLowerCase()">
+            <span class="dot"></span> {{ booking.status }}
+          </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="card-body">
+          <!-- Route Itinerary Header -->
+          <div class="itinerary-row">
+            <div class="city-col">
+              <span class="city-name">{{ booking.origin }}</span>
+              <span class="city-time">{{ formatTime(booking.departureTime) }}</span>
+              <span class="point-sub" *ngIf="booking.boardingPoint">&#128205; {{ booking.boardingPoint }}</span>
+            </div>
+
+            <div class="trip-divider">
+              <span class="date-badge">{{ formatDate(booking.travelDate) }}</span>
+              <div class="arrow-line">
+                <span class="line"></span>
+                <span class="bus-bullet">&#128652;</span>
+              </div>
+            </div>
+
+            <div class="city-col text-right">
+              <span class="city-name">{{ booking.destination }}</span>
+              <span class="city-time">{{ formatTime(booking.arrivalTime) }}</span>
+              <span class="point-sub" *ngIf="booking.droppingPoint">&#128205; {{ booking.droppingPoint }}</span>
+            </div>
+          </div>
+
+          <!-- Bus & Seat Details Strip -->
+          <div class="details-strip">
+            <div class="bus-meta">
+              <strong class="operator-title">{{ booking.operatorCompanyName }}</strong>
+              <span class="bus-id-tag">{{ booking.busNumber }} &bull; {{ booking.busType }}</span>
+            </div>
+
+            <div class="seats-meta">
+              <span class="meta-label">Seats ({{ booking.seats.length }}):</span>
+              <div class="seats-badges">
+                <span class="seat-pill" *ngFor="let s of booking.seats">{{ s }}</span>
+              </div>
+            </div>
+
+            <div class="fare-meta">
+              <span class="meta-label">Total Fare:</span>
+              <span class="fare-amount">₹{{ booking.totalAmount }}</span>
+            </div>
+          </div>
+
+          <!-- Held Lock Note -->
+          <div class="held-alert" *ngIf="booking.status === 'HELD'">
+            <span class="held-icon">&#9201;</span>
+            <div class="held-text">
+              <strong>Seat Hold Active:</strong> Your seats are reserved under lock token <code>{{ booking.lockToken || 'ACTIVE' }}</code>. Confirm your booking to lock in your seats permanently!
+            </div>
+          </div>
+        </div>
+
+        <!-- Card Footer Actions -->
+        <div class="card-footer">
+          <div class="footer-left">
+            <span class="passenger-name" *ngIf="booking.passengerName">
+              &#128100; Passenger: <strong>{{ booking.passengerName }}</strong>
+            </span>
+          </div>
+
+          <div class="footer-actions">
+            <!-- If HELD: Confirm or Cancel -->
+            <button
+              type="button"
+              class="btn-action btn-confirm"
+              *ngIf="booking.status === 'HELD'"
+              (click)="confirmBooking(booking)">
+              &#10004; Confirm & Pay ₹{{ booking.totalAmount }}
+            </button>
+
+            <!-- If CONFIRMED: View / Print Ticket -->
+            <button
+              type="button"
+              class="btn-action btn-ticket"
+              *ngIf="booking.status === 'CONFIRMED'"
+              (click)="viewTicket(booking)">
+              &#127915; View Ticket
+            </button>
+
+            <!-- Cancel Button -->
+            <button
+              type="button"
+              class="btn-action btn-cancel"
+              *ngIf="booking.status !== 'CANCELLED'"
+              (click)="cancelBooking(booking)">
+              Cancel
+            </button>
+
+            <!-- Book Again if Cancelled -->
+            <button
+              type="button"
+              class="btn-action btn-book-again"
+              *ngIf="booking.status === 'CANCELLED'"
+              (click)="goToSearch()">
+              Book Again
+            </button>
+
+            <!-- Remove Button -->
+            <button
+              type="button"
+              class="btn-delete"
+              (click)="deleteBooking(booking)"
+              title="Delete from list">
+              &times;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ticket View Modal -->
+  <div class="modal-backdrop" *ngIf="selectedBookingForView" (click)="closeTicketModal()">
+    <div class="ticket-modal-card" (click)="$event.stopPropagation()">
+      <div class="ticket-modal-header">
+        <div class="brand">
+          <span class="logo">&#128652;</span>
+          <span class="title">Travel<strong>Easy</strong> E-Ticket</span>
+        </div>
+        <button type="button" class="btn-close" (click)="closeTicketModal()">&times;</button>
+      </div>
+
+      <div class="ticket-body" id="printable-ticket">
+        <div class="ticket-status-strip">
+          <span class="pnr">PNR: <strong>{{ selectedBookingForView.bookingReference }}</strong></span>
+          <span class="badge badge-success">&#10004; CONFIRMED</span>
+        </div>
+
+        <div class="ticket-route-row">
+          <div class="station">
+            <span class="time">{{ formatTime(selectedBookingForView.departureTime) }}</span>
+            <span class="city">{{ selectedBookingForView.origin }}</span>
+            <span class="stop" *ngIf="selectedBookingForView.boardingPoint">{{ selectedBookingForView.boardingPoint }}</span>
+          </div>
+
+          <div class="travel-details">
+            <span class="journey-date">{{ formatDate(selectedBookingForView.travelDate) }}</span>
+            <span class="operator">{{ selectedBookingForView.operatorCompanyName }}</span>
+            <span class="bus-spec">{{ selectedBookingForView.busNumber }} &bull; {{ selectedBookingForView.busType }}</span>
+          </div>
+
+          <div class="station text-right">
+            <span class="time">{{ formatTime(selectedBookingForView.arrivalTime) }}</span>
+            <span class="city">{{ selectedBookingForView.destination }}</span>
+            <span class="stop" *ngIf="selectedBookingForView.droppingPoint">{{ selectedBookingForView.droppingPoint }}</span>
+          </div>
+        </div>
+
+        <div class="ticket-meta-grid">
+          <div class="meta-item">
+            <span class="label">PASSENGER</span>
+            <span class="value">{{ selectedBookingForView.passengerName || 'Traveller' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="label">SEAT NUMBER(S)</span>
+            <span class="value seats-highlight">{{ selectedBookingForView.seats.join(', ') }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="label">BOOKING ID</span>
+            <span class="value">{{ selectedBookingForView.bookingId }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="label">TOTAL FARE PAID</span>
+            <span class="value price-highlight">₹{{ selectedBookingForView.totalAmount }}</span>
+          </div>
+        </div>
+
+        <div class="ticket-notice">
+          <p>&#9432; Please present this E-Ticket and a valid government ID during boarding. Reporting time is 15 minutes before scheduled departure.</p>
+        </div>
+      </div>
+
+      <div class="ticket-modal-footer">
+        <button type="button" class="btn-print" (click)="printTicket()">
+          &#128424; Print Ticket
+        </button>
+        <button type="button" class="btn-close-modal" (click)="closeTicketModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

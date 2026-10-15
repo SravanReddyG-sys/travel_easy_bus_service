@@ -5,7 +5,9 @@ import com.traveleasy.bus.dto.request.RegisterRequest;
 import com.traveleasy.bus.dto.response.ApiResponse;
 import com.traveleasy.bus.dto.response.AuthResponse;
 import com.traveleasy.bus.entity.BusOperator;
+import com.traveleasy.bus.entity.User;
 import com.traveleasy.bus.repository.BusOperatorRepository;
+import com.traveleasy.bus.repository.UserRepository;
 import com.traveleasy.bus.security.JwtTokenProvider;
 import com.traveleasy.bus.security.SecurityUtils;
 import com.traveleasy.bus.security.UserPrincipal;
@@ -15,10 +17,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -28,62 +31,89 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication & Authorization", description = "Endpoints for Traveller and Operator authentication, token issuance, registration, and user info")
+@Tag(name = "Authentication & Authorization", description = "Endpoints for Traveller and Operator real database authentication, token issuance, registration, and user info")
 public class AuthController {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final BusOperatorRepository operatorRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     private static final UUID DEFAULT_OPERATOR_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @PostMapping("/login")
-    @Operation(summary = "Login as Traveller or Operator", description = "Authenticates user and returns JWT token with role claims")
+    @Operation(summary = "Login as Traveller or Operator", description = "Verifies email and password against database and returns JWT token with role claims")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        log.info("Login request for email [{}] with role hint [{}]", request.getEmail(), request.getRole());
-
-        String email = request.getEmail().trim().toLowerCase();
-        boolean isOperator = "OPERATOR".equalsIgnoreCase(request.getRole()) || email.contains("operator") || email.contains("royal");
-
-        UserRole role = isOperator ? UserRole.ROLE_OPERATOR : UserRole.ROLE_TRAVELLER;
-        UUID operatorId = null;
-        String companyName = null;
-
-        if (isOperator) {
-            Optional<BusOperator> operatorOpt = operatorRepository.findByContactEmail(email);
-            if (operatorOpt.isPresent()) {
-                BusOperator op = operatorOpt.get();
-                operatorId = op.getId();
-                companyName = op.getCompanyName();
-            } else {
-                operatorId = DEFAULT_OPERATOR_ID;
-                companyName = "Royal Express Travels";
-            }
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email address is required."));
+        }
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Password is required."));
         }
 
-        UUID userId = UUID.randomUUID();
-        String token = jwtTokenProvider.generateToken(userId, email, operatorId, Set.of(role));
+        String email = request.getEmail().trim().toLowerCase();
+        log.info("Processing login request for email [{}]", email);
+
+        // 1. Look up User in database
+        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
+        if (userOpt.isEmpty()) {
+            log.warn("Login failed: No registered user found for email [{}]", email);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("No account found with email '" + email + "'. Please register first."));
+        }
+
+        User user = userOpt.get();
+
+        // 2. Verify password with BCrypt
+        if (!passwordEncoder.matches(request.getPassword().trim(), user.getPasswordHash())) {
+            log.warn("Login failed: Incorrect password for email [{}]", email);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Incorrect password for account '" + email + "'. Please check your password and try again."));
+        }
+
+        // 3. User authenticated successfully!
+        boolean isOperator = "OPERATOR".equalsIgnoreCase(user.getRole());
+        UserRole role = isOperator ? UserRole.ROLE_OPERATOR : UserRole.ROLE_TRAVELLER;
+        UUID operatorId = user.getOperatorId();
+        String companyName = user.getCompanyName();
+
+        String token = jwtTokenProvider.generateToken(user.getId(), email, operatorId, Set.of(role));
 
         AuthResponse authResponse = AuthResponse.builder()
                 .token(token)
                 .tokenType("Bearer")
-                .userId(userId)
+                .userId(user.getId())
                 .email(email)
-                .fullName(isOperator ? (companyName != null ? companyName : "Bus Operator") : "Traveller User")
+                .fullName(user.getFullName())
                 .role(role.name())
                 .operatorId(operatorId)
                 .companyName(companyName)
                 .expiresInSeconds(86400)
                 .build();
 
-        return ResponseEntity.ok(ApiResponse.ok("Login successful", authResponse));
+        log.info("User [{}] ({}) authenticated successfully", email, role.name());
+        return ResponseEntity.ok(ApiResponse.ok("Login successful! Welcome back, " + user.getFullName(), authResponse));
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Register as Traveller or Bus Operator", description = "Creates a new user profile and returns authenticated session token")
+    @Operation(summary = "Register as Traveller or Bus Operator", description = "Creates a real user account in database with BCrypt password hash and returns JWT session")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("Register request for email [{}] as role [{}]", request.getEmail(), request.getRole());
-
         String email = request.getEmail().trim().toLowerCase();
+        log.info("Register request for email [{}] as role [{}]", email, request.getRole());
+
+        // 1. Verify if email is already registered in database
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            log.warn("Registration rejected: Duplicate email [{}]", email);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("An account with email '" + email + "' already exists. Please sign in instead."));
+        }
+
+        // 2. Validate password
+        if (request.getPassword() == null || request.getPassword().trim().length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Password must be at least 6 characters long."));
+        }
+
         boolean isOperator = "OPERATOR".equalsIgnoreCase(request.getRole());
         UserRole role = isOperator ? UserRole.ROLE_OPERATOR : UserRole.ROLE_TRAVELLER;
 
@@ -91,7 +121,7 @@ public class AuthController {
         String companyName = request.getCompanyName();
 
         if (isOperator) {
-            String company = (companyName != null && !companyName.isBlank()) ? companyName : "Express Travels";
+            String company = (companyName != null && !companyName.isBlank()) ? companyName.trim() : "Express Travels";
             String code = "OP-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
             BusOperator newOperator = BusOperator.builder()
@@ -107,37 +137,59 @@ public class AuthController {
             companyName = saved.getCompanyName();
         }
 
-        UUID userId = UUID.randomUUID();
-        String token = jwtTokenProvider.generateToken(userId, email, operatorId, Set.of(role));
+        // 3. Hash password using BCrypt
+        String passwordHash = passwordEncoder.encode(request.getPassword().trim());
+
+        // 4. Save User entity to Database
+        User newUser = User.builder()
+                .email(email)
+                .passwordHash(passwordHash)
+                .fullName(request.getFullName().trim())
+                .phone(request.getContactPhone())
+                .role(isOperator ? "OPERATOR" : "TRAVELLER")
+                .operatorId(operatorId)
+                .companyName(companyName)
+                .build();
+
+        User savedUser = userRepository.save(newUser);
+        log.info("Saved user [{}] to database with ID [{}] and role [{}]", email, savedUser.getId(), savedUser.getRole());
+
+        // 5. Generate signed JWT token
+        String token = jwtTokenProvider.generateToken(savedUser.getId(), email, operatorId, Set.of(role));
 
         AuthResponse authResponse = AuthResponse.builder()
                 .token(token)
                 .tokenType("Bearer")
-                .userId(userId)
+                .userId(savedUser.getId())
                 .email(email)
-                .fullName(request.getFullName())
+                .fullName(savedUser.getFullName())
                 .role(role.name())
                 .operatorId(operatorId)
                 .companyName(companyName)
                 .expiresInSeconds(86400)
                 .build();
 
-        return ResponseEntity.ok(ApiResponse.ok("Registration successful", authResponse));
+        return ResponseEntity.ok(ApiResponse.ok("Registration successful! Welcome, " + savedUser.getFullName(), authResponse));
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Get current authenticated user info", description = "Returns details extracted from active JWT token")
+    @Operation(summary = "Get current authenticated user info", description = "Returns details extracted from active JWT token and database")
     public ResponseEntity<ApiResponse<AuthResponse>> getCurrentUser() {
         UserPrincipal principal = SecurityUtils.requireCurrentUserPrincipal();
-        boolean isOperator = principal.isOperator();
+        
+        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(principal.getEmail());
+        String fullName = userOpt.map(User::getFullName)
+                .orElse(principal.isOperator() ? "Bus Operator" : "Verified Traveller");
+        String companyName = userOpt.map(User::getCompanyName)
+                .orElse(principal.isOperator() ? "Royal Express Travels" : null);
 
         AuthResponse response = AuthResponse.builder()
                 .userId(principal.getUserId())
                 .email(principal.getEmail())
-                .fullName(isOperator ? "Royal Express Travels Operator" : "Verified Traveller")
-                .role(isOperator ? "ROLE_OPERATOR" : "ROLE_TRAVELLER")
+                .fullName(fullName)
+                .role(principal.isOperator() ? "ROLE_OPERATOR" : "ROLE_TRAVELLER")
                 .operatorId(principal.getOperatorId())
-                .companyName(isOperator ? "Royal Express Travels" : null)
+                .companyName(companyName)
                 .expiresInSeconds(86400)
                 .build();
 
