@@ -151,6 +151,12 @@
             autocomplete="current-password" />
         </div>
 
+        <div class="forgot-link-row">
+          <button type="button" class="btn-forgot-password" (click)="setAuthMode('FORGOT_PASSWORD')">
+            Forgot password?
+          </button>
+        </div>
+
         <button type="submit" class="btn-submit" [disabled]="authLoading">
           {{ authLoading ? 'Signing In...' : 'Sign In' }}
         </button>
@@ -163,10 +169,10 @@
         </div>
       </form>
 
-      <!-- REGISTER FORM (Real Database Registration) -->
+      <!-- REGISTER FORM (Step 1: Enter details) -->
       <form *ngIf="authMode === 'REGISTER'" (ngSubmit)="submitRegister()" class="auth-form">
         <div class="form-instructions">
-          <p>Create a verified account saved directly into the database. Use your real email for instant access.</p>
+          <p>Create a verified account saved directly into the database. A verification code will be sent to your email via Resend.</p>
         </div>
 
         <div class="form-group">
@@ -213,7 +219,7 @@
             placeholder="e.g. sneha@gmail.com"
             required
             autocomplete="email" />
-          <small class="field-hint">Your login email will be uniquely registered in our database.</small>
+          <small class="field-hint">A verification code will be dispatched to this email via Resend.</small>
         </div>
 
         <div class="form-group">
@@ -262,13 +268,150 @@
         </div>
 
         <button type="submit" class="btn-submit" [disabled]="authLoading">
-          {{ authLoading ? 'Creating Account...' : 'Create Account' }}
+          {{ authLoading ? 'Sending Verification Code...' : 'Verify Email & Register ➔' }}
         </button>
 
         <div class="auth-switch-prompt">
           <span>Already registered?</span>
           <button type="button" class="btn-link" (click)="setAuthMode('LOGIN')">
             Sign In Here
+          </button>
+        </div>
+      </form>
+
+      <!-- VERIFY REGISTRATION OTP FORM (Step 2) -->
+      <form *ngIf="authMode === 'VERIFY_REGISTRATION'" (ngSubmit)="submitVerifyRegisterOtp()" class="auth-form">
+        <div class="form-instructions">
+          <h3 style="margin-top: 0; color: #1e3c72;">Verify Your Email ✉️</h3>
+          <p>We've sent a 6-digit verification code to <strong>{{ registerForm.email }}</strong> via Resend.</p>
+        </div>
+
+        <div class="sandbox-note-banner" *ngIf="sandboxHint">
+          <span class="icon">ℹ️</span>
+          <span>{{ sandboxHint }}</span>
+        </div>
+
+        <div class="form-group text-center">
+          <label>Enter 6-Digit Verification Code <span class="required">*</span></label>
+          <input
+            type="text"
+            class="otp-input-field"
+            [(ngModel)]="otpCode"
+            name="otpCode"
+            placeholder="• • • • • •"
+            maxlength="6"
+            required
+            autocomplete="one-time-code" />
+          <small class="field-hint">Code expires in 10 minutes</small>
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="authLoading">
+          {{ authLoading ? 'Verifying Code...' : 'Verify & Complete Registration' }}
+        </button>
+
+        <div class="otp-actions-row">
+          <button type="button" class="btn-link" [disabled]="authLoading" (click)="resendRegistrationOtp()">
+            🔄 Resend Code
+          </button>
+          <button type="button" class="btn-link" (click)="setAuthMode('REGISTER')">
+            ← Edit Details
+          </button>
+        </div>
+      </form>
+
+      <!-- FORGOT PASSWORD REQUEST FORM -->
+      <form *ngIf="authMode === 'FORGOT_PASSWORD'" (ngSubmit)="submitForgotPassword()" class="auth-form">
+        <div class="form-instructions">
+          <h3 style="margin-top: 0; color: #1e3c72;">Forgot Password? 🔑</h3>
+          <p>Enter your registered account email. We will send you a 6-digit security code via Resend to reset your password.</p>
+        </div>
+
+        <div class="form-group">
+          <label>Registered Email Address <span class="required">*</span></label>
+          <input
+            type="email"
+            [(ngModel)]="forgotEmail"
+            name="forgotEmail"
+            placeholder="e.g. sneha.23mic7257@vitapstudent.ac.in"
+            required
+            autocomplete="email" />
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="authLoading">
+          {{ authLoading ? 'Sending Reset Code...' : 'Send Reset Code ➔' }}
+        </button>
+
+        <div class="auth-switch-prompt">
+          <button type="button" class="btn-link" (click)="setAuthMode('LOGIN')">
+            ← Back to Sign In
+          </button>
+        </div>
+      </form>
+
+      <!-- RESET PASSWORD FORM -->
+      <form *ngIf="authMode === 'RESET_PASSWORD'" (ngSubmit)="submitResetPassword()" class="auth-form">
+        <div class="form-instructions">
+          <h3 style="margin-top: 0; color: #1e3c72;">Set New Password 🔐</h3>
+          <p>Enter the 6-digit reset code sent to <strong>{{ forgotEmail }}</strong> and choose a new password.</p>
+        </div>
+
+        <div class="sandbox-note-banner" *ngIf="sandboxHint">
+          <span class="icon">ℹ️</span>
+          <span>{{ sandboxHint }}</span>
+        </div>
+
+        <div class="form-group text-center">
+          <label>6-Digit Reset Code <span class="required">*</span></label>
+          <input
+            type="text"
+            class="otp-input-field"
+            [(ngModel)]="otpCode"
+            name="resetOtpCode"
+            placeholder="• • • • • •"
+            maxlength="6"
+            required
+            autocomplete="one-time-code" />
+        </div>
+
+        <div class="form-group">
+          <label>New Password <span class="required">*</span></label>
+          <input
+            type="password"
+            [(ngModel)]="newPassword"
+            name="newPassword"
+            placeholder="At least 6 characters"
+            required
+            minlength="6"
+            autocomplete="new-password" />
+        </div>
+
+        <div class="form-group">
+          <label>Confirm New Password <span class="required">*</span></label>
+          <input
+            type="password"
+            [(ngModel)]="confirmNewPassword"
+            name="confirmNewPassword"
+            placeholder="Re-enter new password"
+            required
+            minlength="6"
+            autocomplete="new-password" />
+          <div class="password-match-indicator" *ngIf="confirmNewPassword">
+            <span class="match-success" *ngIf="newPassword && newPassword === confirmNewPassword">
+              &#10004; Passwords match
+            </span>
+            <span class="match-error" *ngIf="newPassword && newPassword !== confirmNewPassword">
+              &#10008; Passwords do not match
+            </span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="authLoading">
+          {{ authLoading ? 'Resetting Password...' : 'Reset Password & Proceed to Login' }}
+        </button>
+
+        <div class="auth-switch-prompt">
+          <button type="button" class="btn-link" (click)="setAuthMode('LOGIN')">
+            ← Cancel & Return to Sign In
           </button>
         </div>
       </form>

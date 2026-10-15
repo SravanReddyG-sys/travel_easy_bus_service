@@ -301,4 +301,104 @@ public class ResendEmailServiceImpl implements ResendEmailService {
 
         return sendEmail(request.getToEmail(), subject, html);
     }
+
+    @Override
+    public EmailSendResponse sendVerificationOtpEmail(String toEmail, String fullName, String otpCode) {
+        String greetingName = (fullName != null && !fullName.isBlank()) ? fullName.trim() : "Traveler";
+        String subject = "Your TravelEasy Verification Code: " + otpCode + " 🔐";
+
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Verify Your Email</title>
+                </head>
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
+                  <div style="max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                    <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 28px; text-align: center; color: #ffffff;">
+                      <h1 style="margin: 0; font-size: 24px; font-weight: 700;">🚌 TravelEasy</h1>
+                      <p style="margin: 6px 0 0; opacity: 0.9; font-size: 14px;">Email Account Verification</p>
+                    </div>
+
+                    <div style="padding: 30px 24px; color: #1e293b; text-align: center;">
+                      <p style="margin-top: 0; font-size: 16px;">Hello <strong>{{NAME}}</strong>,</p>
+                      <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">
+                        Thank you for registering on TravelEasy! Please use the 6-digit verification code below to verify your email address:
+                      </p>
+
+                      <!-- OTP Box -->
+                      <div style="background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 18px 24px; margin: 24px auto; display: inline-block; min-width: 200px;">
+                        <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #1e3c72; font-family: monospace;">{{OTP}}</span>
+                      </div>
+
+                      <p style="color: #64748b; font-size: 13px; margin: 16px 0 0;">
+                        ⏱️ This code will expire in <strong>10 minutes</strong>.<br>
+                        If you did not request this registration, please disregard this email.
+                      </p>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 16px 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+                      TravelEasy Bus Service Platform • Powered by Resend Email API
+                    </div>
+                  </div>
+                </body>
+                </html>
+                """
+                .replace("{{NAME}}", greetingName)
+                .replace("{{OTP}}", otpCode);
+
+        return sendEmail(toEmail, subject, html);
+    }
+
+    @Override
+    public EmailSendResponse sendPasswordResetOtpEmail(String toEmail, String fullName, String otpCode) {
+        String greetingName = (fullName != null && !fullName.isBlank()) ? fullName.trim() : "Traveler";
+        String subject = "TravelEasy Password Reset Code: " + otpCode + " 🔑";
+
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Reset Your Password</title>
+                </head>
+                <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
+                  <div style="max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                    <div style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); padding: 28px; text-align: center; color: #ffffff;">
+                      <h1 style="margin: 0; font-size: 24px; font-weight: 700;">🔑 TravelEasy</h1>
+                      <p style="margin: 6px 0 0; opacity: 0.9; font-size: 14px;">Password Reset Request</p>
+                    </div>
+
+                    <div style="padding: 30px 24px; color: #1e293b; text-align: center;">
+                      <p style="margin-top: 0; font-size: 16px;">Hello <strong>{{NAME}}</strong>,</p>
+                      <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">
+                        We received a request to reset the password for your TravelEasy account. Use the 6-digit security code below:
+                      </p>
+
+                      <!-- OTP Box -->
+                      <div style="background: #fef2f2; border: 2px dashed #fca5a5; border-radius: 10px; padding: 18px 24px; margin: 24px auto; display: inline-block; min-width: 200px;">
+                        <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #b91c1c; font-family: monospace;">{{OTP}}</span>
+                      </div>
+
+                      <p style="color: #64748b; font-size: 13px; margin: 16px 0 0;">
+                        ⏱️ This reset code is valid for <strong>10 minutes</strong>.<br>
+                        🔒 If you did not make this request, you can safely ignore this email. Your password will remain unchanged.
+                      </p>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 16px 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+                      TravelEasy Bus Service Platform • Powered by Resend Email API
+                    </div>
+                  </div>
+                </body>
+                </html>
+                """
+                .replace("{{NAME}}", greetingName)
+                .replace("{{OTP}}", otpCode);
+
+        return sendEmail(toEmail, subject, html);
+    }
 }

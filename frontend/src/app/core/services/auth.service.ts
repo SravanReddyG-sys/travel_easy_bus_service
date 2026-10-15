@@ -138,6 +138,53 @@ export class AuthService {
     );
   }
 
+  sendRegistrationOtp(payload: RegisterPayload): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/register/send-otp`, {
+      fullName: payload.fullName.trim(),
+      email: payload.email.trim().toLowerCase(),
+      password: payload.password ? payload.password.trim() : '',
+      role: payload.role,
+      companyName: payload.companyName ? payload.companyName.trim() : undefined,
+      contactPhone: payload.contactPhone ? payload.contactPhone.trim() : ''
+    });
+  }
+
+  verifyRegistrationOtp(email: string, otpCode: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/register/verify-otp`, {
+      email: email.trim().toLowerCase(),
+      otpCode: otpCode.trim()
+    }).pipe(
+      tap((res) => {
+        if (res && res.data) {
+          const user: AuthUser = {
+            userId: res.data.userId,
+            email: res.data.email,
+            fullName: res.data.fullName,
+            role: (res.data.role || 'ROLE_TRAVELLER').replace('ROLE_', '') as any,
+            operatorId: res.data.operatorId,
+            companyName: res.data.companyName,
+            token: res.data.token
+          };
+          this.setCurrentUser(user);
+        }
+      })
+    );
+  }
+
+  forgotPassword(email: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/password/forgot`, {
+      email: email.trim().toLowerCase()
+    });
+  }
+
+  resetPassword(email: string, otpCode: string, newPassword: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/password/reset`, {
+      email: email.trim().toLowerCase(),
+      otpCode: otpCode.trim(),
+      newPassword: newPassword.trim()
+    });
+  }
+
   switchRole(role: 'TRAVELLER' | 'OPERATOR' | 'ADMIN'): void {
     const current = this.currentUserSubject.value;
     const updated: AuthUser = {

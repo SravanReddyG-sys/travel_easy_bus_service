@@ -21,6 +21,16 @@ public interface ResendEmailService {
     EmailSendResponse sendBookingConfirmationEmail(BookingConfirmationEmailRequest request);
 
     /**
+     * Send 6-digit email verification OTP upon registration
+     */
+    EmailSendResponse sendVerificationOtpEmail(String toEmail, String fullName, String otpCode);
+
+    /**
+     * Send 6-digit password reset OTP
+     */
+    EmailSendResponse sendPasswordResetOtpEmail(String toEmail, String fullName, String otpCode);
+
+    /**
      * Returns true if Resend API key is configured
      */
     boolean isConfigured();

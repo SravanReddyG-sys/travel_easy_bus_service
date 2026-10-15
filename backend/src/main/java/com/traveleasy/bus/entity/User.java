@@ -36,4 +36,8 @@ public class User extends BaseEntity {
 
     @Column(name = "company_name", length = 255)
     private String companyName;
+
+    @Column(name = "is_email_verified", nullable = false)
+    @Builder.Default
+    private Boolean isEmailVerified = true;
 }

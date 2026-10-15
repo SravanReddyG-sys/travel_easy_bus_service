@@ -15,7 +15,7 @@ export class App {
   title = 'TravelEasy Bus Microservice';
 
   showAuthModal = false;
-  authMode: 'LOGIN' | 'REGISTER' = 'LOGIN';
+  authMode: 'LOGIN' | 'REGISTER' | 'VERIFY_REGISTRATION' | 'FORGOT_PASSWORD' | 'RESET_PASSWORD' = 'LOGIN';
   authErrorMessage = '';
   authSuccessMessage = '';
   authLoading = false;
@@ -35,6 +35,11 @@ export class App {
   };
 
   confirmPassword = '';
+  otpCode = '';
+  forgotEmail = '';
+  newPassword = '';
+  confirmNewPassword = '';
+  sandboxHint = '';
 
   constructor(
     public authService: AuthService,
@@ -48,13 +53,15 @@ export class App {
     this.authMode = 'LOGIN';
     this.authErrorMessage = '';
     this.authSuccessMessage = '';
+    this.sandboxHint = '';
     this.showAuthModal = true;
   }
 
-  setAuthMode(mode: 'LOGIN' | 'REGISTER'): void {
+  setAuthMode(mode: 'LOGIN' | 'REGISTER' | 'VERIFY_REGISTRATION' | 'FORGOT_PASSWORD' | 'RESET_PASSWORD'): void {
     this.authMode = mode;
     this.authErrorMessage = '';
     this.authSuccessMessage = '';
+    this.sandboxHint = '';
   }
 
   closeAuthModal(): void {
@@ -62,6 +69,11 @@ export class App {
     this.authErrorMessage = '';
     this.authSuccessMessage = '';
     this.confirmPassword = '';
+    this.otpCode = '';
+    this.forgotEmail = '';
+    this.newPassword = '';
+    this.confirmNewPassword = '';
+    this.sandboxHint = '';
   }
 
   isValidEmail(email: string): boolean {
@@ -172,7 +184,7 @@ export class App {
 
     this.authLoading = true;
 
-    this.authService.register({
+    this.authService.sendRegistrationOtp({
       fullName,
       email,
       password,
@@ -182,7 +194,36 @@ export class App {
     }).subscribe({
       next: (res) => {
         this.authLoading = false;
-        this.authSuccessMessage = 'Account created successfully! Welcome to TravelEasy.';
+        this.authMode = 'VERIFY_REGISTRATION';
+        this.sandboxHint = res?.data?.sandboxNote || '';
+        this.otpCode = res?.data?.demoOtp || '';
+        this.authSuccessMessage = `Verification code sent to ${email} via Resend. Please enter it below.`;
+      },
+      error: (err) => {
+        this.authLoading = false;
+        this.authErrorMessage = err.error?.message || 'Failed to send verification code. Please check your information and try again.';
+      }
+    });
+  }
+
+  submitVerifyRegisterOtp(): void {
+    this.authErrorMessage = '';
+    this.authSuccessMessage = '';
+
+    const email = (this.registerForm.email || '').trim();
+    const code = (this.otpCode || '').trim();
+
+    if (!code || code.length < 4) {
+      this.authErrorMessage = 'Please enter the 6-digit verification code sent to your email.';
+      return;
+    }
+
+    this.authLoading = true;
+
+    this.authService.verifyRegistrationOtp(email, code).subscribe({
+      next: (res) => {
+        this.authLoading = false;
+        this.authSuccessMessage = 'Email verified! Account created successfully.';
         setTimeout(() => {
           this.closeAuthModal();
           if (this.registerForm.role === 'OPERATOR') {
@@ -190,11 +231,105 @@ export class App {
           } else {
             this.router.navigate(['/traveller/search']);
           }
-        }, 500);
+        }, 600);
       },
       error: (err) => {
         this.authLoading = false;
-        this.authErrorMessage = err.error?.message || err.error?.data || 'Registration failed. Please check your information and try again.';
+        this.authErrorMessage = err.error?.message || 'Invalid or expired verification code.';
+      }
+    });
+  }
+
+  resendRegistrationOtp(): void {
+    this.authErrorMessage = '';
+    this.authSuccessMessage = '';
+    this.authLoading = true;
+
+    this.authService.sendRegistrationOtp(this.registerForm).subscribe({
+      next: (res) => {
+        this.authLoading = false;
+        this.sandboxHint = res?.data?.sandboxNote || '';
+        this.otpCode = res?.data?.demoOtp || '';
+        this.authSuccessMessage = 'A new verification code has been dispatched via Resend.';
+      },
+      error: (err) => {
+        this.authLoading = false;
+        this.authErrorMessage = err.error?.message || 'Failed to resend code.';
+      }
+    });
+  }
+
+  submitForgotPassword(): void {
+    this.authErrorMessage = '';
+    this.authSuccessMessage = '';
+
+    const email = (this.forgotEmail || '').trim();
+    if (!email) {
+      this.authErrorMessage = 'Please enter your registered email address.';
+      return;
+    }
+
+    if (!this.isValidEmail(email)) {
+      this.authErrorMessage = 'Please enter a valid email address.';
+      return;
+    }
+
+    this.authLoading = true;
+
+    this.authService.forgotPassword(email).subscribe({
+      next: (res) => {
+        this.authLoading = false;
+        this.authMode = 'RESET_PASSWORD';
+        this.sandboxHint = res?.data?.sandboxNote || '';
+        this.otpCode = res?.data?.demoOtp || '';
+        this.authSuccessMessage = `Password reset code sent to ${email} via Resend.`;
+      },
+      error: (err) => {
+        this.authLoading = false;
+        this.authErrorMessage = err.error?.message || 'Failed to send password reset code. Please check your email.';
+      }
+    });
+  }
+
+  submitResetPassword(): void {
+    this.authErrorMessage = '';
+    this.authSuccessMessage = '';
+
+    const email = (this.forgotEmail || '').trim();
+    const code = (this.otpCode || '').trim();
+    const newPass = this.newPassword || '';
+    const confirm = this.confirmNewPassword || '';
+
+    if (!code || code.length < 4) {
+      this.authErrorMessage = 'Please enter the 6-digit reset code.';
+      return;
+    }
+
+    if (!newPass || newPass.length < 6) {
+      this.authErrorMessage = 'New password must be at least 6 characters long.';
+      return;
+    }
+
+    if (newPass !== confirm) {
+      this.authErrorMessage = 'Passwords do not match. Please verify and re-type identical passwords.';
+      return;
+    }
+
+    this.authLoading = true;
+
+    this.authService.resetPassword(email, code, newPass).subscribe({
+      next: (res) => {
+        this.authLoading = false;
+        this.authSuccessMessage = 'Password reset successfully! Please sign in with your new password.';
+        setTimeout(() => {
+          this.authMode = 'LOGIN';
+          this.loginForm.email = email;
+          this.loginForm.password = '';
+        }, 1200);
+      },
+      error: (err) => {
+        this.authLoading = false;
+        this.authErrorMessage = err.error?.message || 'Failed to reset password. Please check your code.';
       }
     });
   }
