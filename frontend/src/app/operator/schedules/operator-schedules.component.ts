@@ -83,7 +83,7 @@ export class OperatorSchedulesComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.busApiService.getOperatorRoutes().subscribe({
+    this.busApiService.getOperatorRoutes(0, 50).subscribe({
       next: (res) => {
         this.routes = res.content || [];
         if (this.routes.length > 0 && !this.newSchedule.routeId) {

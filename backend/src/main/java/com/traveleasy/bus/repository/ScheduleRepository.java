@@ -41,6 +41,18 @@ public interface ScheduleRepository extends JpaRepository<Schedule, UUID>, JpaSp
             @Param("destination") String destination,
             @Param("scheduleDate") LocalDate scheduleDate);
 
+    @Query("SELECT s FROM Schedule s " +
+           "JOIN FETCH s.bus b " +
+           "JOIN FETCH s.route r " +
+           "JOIN FETCH s.operator o " +
+           "WHERE LOWER(r.origin) = LOWER(:origin) " +
+           "AND LOWER(r.destination) = LOWER(:destination) " +
+           "AND s.status = 'SCHEDULED' " +
+           "ORDER BY s.departureTime ASC")
+    List<Schedule> findTemplateSchedulesForRoute(
+            @Param("origin") String origin,
+            @Param("destination") String destination);
+
     @Query("SELECT COUNT(s) > 0 FROM Schedule s " +
            "WHERE s.bus.id = :busId " +
            "AND s.id <> :excludeScheduleId " +

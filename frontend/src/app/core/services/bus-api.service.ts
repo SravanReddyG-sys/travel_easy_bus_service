@@ -86,11 +86,56 @@ export class BusApiService {
       .pipe(map(res => res.data));
   }
 
-  releaseSeats(scheduleId: string, seatNumbers: string[], lockToken?: string): Observable<any> {
+  confirmSeats(scheduleId: string, request: {
+    seatNumbers: string[];
+    lockToken: string;
+    bookingReference: string;
+  }): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/schedules/${scheduleId}/seats/confirm`, request)
+      .pipe(map(res => res.data));
+  }
+
+  releaseSeats(scheduleId: string, seatNumbers: string[], lockToken?: string, bookingReference?: string): Observable<any> {
     return this.http.post<ApiResponse<any>>(`${this.baseUrl}/schedules/${scheduleId}/seats/release`, {
       seatNumbers,
-      lockToken
+      lockToken,
+      bookingReference
     }).pipe(map(res => res.data));
+  }
+
+  // ==========================================
+  // RESEND EMAIL NOTIFICATIONS (resend.com)
+  // ==========================================
+
+  sendBookingConfirmationEmail(payload: {
+    toEmail: string;
+    passengerName: string;
+    bookingReference: string;
+    busNumber: string;
+    operatorName: string;
+    origin: string;
+    destination: string;
+    travelDate: string;
+    departureTime: string;
+    seats: string[];
+    totalAmount: number;
+    boardingPoint?: string;
+    droppingPoint?: string;
+  }): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/notifications/email/booking-confirmation`, payload)
+      .pipe(map(res => res.data));
+  }
+
+  sendTestEmail(toEmail: string, subject?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/notifications/email/test`, {
+      to: toEmail,
+      subject: subject || 'Test Email from TravelEasy via Resend'
+    }).pipe(map(res => res.data));
+  }
+
+  getResendEmailStatus(): Observable<any> {
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/notifications/email/status`)
+      .pipe(map(res => res.data));
   }
 
   // ==========================================

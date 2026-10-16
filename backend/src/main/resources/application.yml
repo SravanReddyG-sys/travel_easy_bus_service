@@ -72,6 +72,12 @@ app:
     seat-lock:
       default-ttl-minutes: ${SEAT_LOCK_TTL_MINUTES:10}
 
+# Resend Email Delivery (https://resend.com)
+resend:
+  api-key: ${RESEND_API_KEY:}
+  from-email: ${RESEND_FROM_EMAIL:TravelEasy <onboarding@resend.dev>}
+  enabled: ${RESEND_ENABLED:true}
+
 # Actuator Health & Metrics
 management:
   endpoints:

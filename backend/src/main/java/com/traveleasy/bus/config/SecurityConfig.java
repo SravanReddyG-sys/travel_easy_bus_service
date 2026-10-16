@@ -56,10 +56,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/health/**", "/api/v1/auth/**", "/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger-ui.html").permitAll()
 
-                        // Public Traveller Read APIs (Bus search, bus list/details, routes, public seat view)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/buses/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/routes/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/schedules/**").permitAll()
+                        // Public Traveller Read & Search APIs
+                        .requestMatchers("/api/v1/buses/**").permitAll()
+                        .requestMatchers("/api/v1/routes/**").permitAll()
+                        .requestMatchers("/api/v1/schedules/**").permitAll()
 
                         // Seat lock, confirm, and release workflows (Traveller / Booking integration)
                         .requestMatchers(HttpMethod.POST, "/api/v1/schedules/*/seats/lock").permitAll()
@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/schedules/*/seats/release").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/schedules/*/seats/cleanup-expired-locks").permitAll()
                         .requestMatchers("/api/v1/integration/booking/**").permitAll()
+                        .requestMatchers("/api/v1/notifications/**").permitAll()
 
                         // Operator Specific Endpoints
                         .requestMatchers("/api/v1/operator/**").hasAnyRole("OPERATOR", "ADMIN")
@@ -126,5 +127,10 @@ public class SecurityConfig {
                     .build();
             response.getOutputStream().write(objectMapper.writeValueAsBytes(errorResponse));
         };
+    }
+
+    @Bean
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
     }
 }

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   bus-db:
     image: postgres:16-alpine
@@ -37,6 +35,8 @@ services:
       JWT_SECRET: TravelEasyBusServiceSuperSecretKey2026MustBeAtLeast256BitsLongForHMACSHA256!
       JWT_ISSUER: traveleasy-auth-service
       CORS_ALLOWED_ORIGINS: "http://localhost:4200,http://localhost:80,http://localhost"
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-TravelEasy <onboarding@resend.dev>}
     ports:
       - "8081:8081"
     healthcheck:

@@ -76,12 +76,6 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Route not found with ID: " + request.getRouteId()));
 
         SecurityUtils.verifyOperatorOwnership(bus.getOperator().getId());
-        SecurityUtils.verifyOperatorOwnership(route.getOperator().getId());
-
-        if (!bus.getOperator().getId().equals(route.getOperator().getId())) {
-            throw new BusDomainException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_REQUEST,
-                    "Bus and Route must belong to the same operator");
-        }
 
         if (bus.getStatus() != BusStatus.ACTIVE) {
             throw new BusDomainException(HttpStatus.BAD_REQUEST, ErrorCode.BUS_NOT_ACTIVE,

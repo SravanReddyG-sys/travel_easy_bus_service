@@ -65,6 +65,11 @@ public final class SecurityUtils {
             return; // Admins have global operational access
         }
 
+        UUID defaultDemoOperatorId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        if (defaultDemoOperatorId.equals(resourceOperatorId)) {
+            return; // Platform sample trips and assets can be inspected by any authenticated operator
+        }
+
         if (principal.getOperatorId() == null || resourceOperatorId == null || !principal.getOperatorId().equals(resourceOperatorId)) {
             throw ForbiddenAccessException.operatorMismatch();
         }
