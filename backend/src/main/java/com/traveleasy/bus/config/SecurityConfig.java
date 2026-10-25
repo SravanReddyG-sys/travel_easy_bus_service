@@ -57,7 +57,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger-ui.html").permitAll()
 
                         // Public Traveller Read & Search APIs
-                        .requestMatchers("/api/v1/buses/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/buses/**").permitAll()
                         .requestMatchers("/api/v1/routes/**").permitAll()
                         .requestMatchers("/api/v1/schedules/**").permitAll()
 
