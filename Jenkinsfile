@@ -6,6 +6,13 @@ pipeline {
         githubPush()
     }
 
+    environment {
+        // Ensure Maven and Java are in PATH for the Jenkins Windows Service
+        MAVEN_HOME = 'C:\\Program Files\\apache-maven-3.10.0'
+        JAVA_HOME  = 'C:\\Program Files\\Java\\jdk-21.0.12.1'
+        PATH       = "C:\\Program Files\\apache-maven-3.10.0\\bin;C:\\Program Files\\Java\\jdk-21.0.12.1\\bin;${env.PATH}"
+    }
+
     stages {
         // Stage 1: Checkout - Pull latest source code from the GitHub repository
         stage('Checkout') {
