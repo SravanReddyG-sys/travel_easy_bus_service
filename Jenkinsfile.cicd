@@ -1,0 +1,114 @@
+pipeline {
+    agent any
+
+    triggers {
+        githubPush()
+    }
+
+    environment {
+        // Build tools and paths
+        MAVEN_HOME   = 'C:\\Program Files\\apache-maven-3.10.0'
+        JAVA_HOME    = 'C:\\Program Files\\Java\\jdk-21.0.12.1'
+        
+        // Expose Docker daemon communication via local TCP socket
+        DOCKER_HOST  = 'tcp://127.0.0.1:2375'
+        
+        PATH         = "C:\\Program Files\\apache-maven-3.10.0\\bin;C:\\Program Files\\Java\\jdk-21.0.12.1\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
+    }
+
+    stages {
+        // Stage 1: Checkout - Pull latest source code from GitHub
+        stage('Checkout') {
+            steps {
+                echo '=== Stage 1: Checking out code from GitHub ==='
+                checkout scm
+            }
+        }
+
+        // Stage 2: Backend Build & Test - Compile Java 21 Spring Boot app & execute 114 tests
+        stage('Backend: Build & Test') {
+            steps {
+                echo '=== Stage 2: Compiling Java backend and running test suite ==='
+                dir('backend') {
+                    bat 'mvn clean test'
+                }
+            }
+            post {
+                always {
+                    echo '=== Reporting: Publishing JUnit test results ==='
+                    junit allowEmptyResults: true, testResults: 'backend/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        // Stage 3: Backend Package JAR - Generate executable JAR and archive it
+        stage('Backend: Package JAR') {
+            steps {
+                echo '=== Stage 3: Packaging backend into executable JAR ==='
+                dir('backend') {
+                    bat 'mvn package -DskipTests'
+                }
+            }
+            post {
+                success {
+                    echo '=== Archiving backend JAR artifact ==='
+                    archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/target/*.jar', fingerprint: true
+                }
+            }
+        }
+
+        // Stage 4: Frontend Build - Install npm dependencies & compile Angular 20 production bundle
+        stage('Frontend: Build Angular') {
+            steps {
+                echo '=== Stage 4: Compiling Angular Frontend Production Bundle ==='
+                dir('frontend') {
+                    bat 'npm ci'
+                    bat 'npm run build'
+                }
+            }
+        }
+
+        // Stage 5: Containerize - Assemble Docker images for frontend and backend
+        stage('Docker: Build Images') {
+            steps {
+                echo '=== Stage 5: Building Frontend & Backend Docker Images ==='
+                bat 'docker compose build'
+            }
+        }
+
+        // Stage 6: Deploy via Docker - Launch full multi-container stack locally
+        stage('Docker: Deploy Stack') {
+            steps {
+                echo '=== Stage 6: Deploying Application Stack via Docker Compose ==='
+                bat 'docker compose down'
+                bat 'docker compose up -d'
+            }
+        }
+
+        // Stage 7: Verify Deployment - Automated smoke test on microservice health endpoint
+        stage('Verify Deployment') {
+            steps {
+                echo '=== Stage 7: Waiting for microservice containers to become healthy ==='
+                sleep 25
+                bat 'C:\\Windows\\System32\\curl.exe -f http://localhost:8081/api/v1/health'
+                echo '=== Deployment verified: Application is LIVE and healthy! ==='
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '========================================================================'
+            echo ' FULL-STACK CI/CD PIPELINE SUCCEEDED!'
+            echo ' Frontend UI:  http://localhost:4200'
+            echo ' Backend API:  http://localhost:8081/swagger-ui.html'
+            echo ' Health Check: http://localhost:8081/api/v1/health'
+            echo '========================================================================'
+        }
+        failure {
+            echo '========================================================================'
+            echo ' CI/CD Pipeline Failed! Please check build and container logs.'
+            echo '========================================================================'
+        }
+    }
+}

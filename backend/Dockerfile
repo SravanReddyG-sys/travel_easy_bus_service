@@ -1,15 +1,5 @@
-# Multi-stage build for TravelEasy Bus Microservice
-FROM eclipse-temurin:21-jdk-alpine AS builder
-WORKDIR /workspace
-
-# Copy Maven wrapper & pom first for dependency caching
-COPY pom.xml .
-COPY src src
-
-# Build application skipping tests for container image assembly
-RUN apk add --no-cache maven && \
-    mvn clean package -DskipTests
-
+# Production runtime image for TravelEasy Bus Microservice
+# Optimized for CI/CD: Copies pre-tested, packaged JAR from Jenkins workspace
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
@@ -17,8 +7,8 @@ WORKDIR /app
 RUN addgroup -S traveleasy && adduser -S traveleasy -G traveleasy
 USER traveleasy:traveleasy
 
-# Copy built jar from builder stage
-COPY --from=builder /workspace/target/bus-service-1.0.0-SNAPSHOT.jar app.jar
+# Copy verified and tested JAR artifact produced by Jenkins CI
+COPY target/bus-service-1.0.0-SNAPSHOT.jar app.jar
 
 EXPOSE 8081
 
