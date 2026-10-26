@@ -97,6 +97,10 @@ pipeline {
     }
 
     post {
+        always {
+            echo '=== Post: Cleaning up dangling Docker images to reclaim disk space ==='
+            bat 'docker image prune -f'
+        }
         success {
             echo '========================================================================'
             echo ' FULL-STACK CI/CD PIPELINE SUCCEEDED!'
