@@ -12,6 +12,9 @@ pipeline {
         
         // Expose Docker daemon communication via local TCP socket
         DOCKER_HOST  = 'tcp://127.0.0.1:2375'
+
+        // Kubernetes Cluster Kubeconfig Path
+        KUBECONFIG   = 'C:\\Users\\reddy\\.kube\\config'
         
         // Tool paths including kubectl, k3d, node, maven, java, and docker
         PATH         = "C:\\Program Files\\apache-maven-3.10.0\\bin;C:\\Program Files\\Java\\jdk-21.0.12.1\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Users\\reddy\\AppData\\Local\\Microsoft\\WindowsApps;${env.PATH}"
@@ -110,6 +113,7 @@ pipeline {
             steps {
                 echo '=== Stage 9: Scaling Microservice Backend Deployment to 3 Replicas ==='
                 bat 'kubectl scale deployment/bus-service --replicas=3 -n traveleasy'
+                bat 'kubectl rollout status deployment/bus-service -n traveleasy --timeout=60s'
                 bat 'kubectl get pods -l app=bus-service -n traveleasy'
             }
         }
