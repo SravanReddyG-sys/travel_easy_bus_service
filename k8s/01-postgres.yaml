@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bus-db-pvc
+  namespace: traveleasy
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bus-db-secret
+  namespace: traveleasy
+type: Opaque
+stringData:
+  POSTGRES_DB: "bus_db"
+  POSTGRES_USER: "traveleasy_user"
+  POSTGRES_PASSWORD: "traveleasy_pass"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bus-db
+  namespace: traveleasy
+  labels:
+    app: bus-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bus-db
+  template:
+    metadata:
+      labels:
+        app: bus-db
+        tier: database
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: bus-db-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: bus-db-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bus-db-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U traveleasy_user -d bus_db
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U traveleasy_user -d bus_db
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: bus-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bus-db
+  namespace: traveleasy
+  labels:
+    app: bus-db
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres
+  selector:
+    app: bus-db

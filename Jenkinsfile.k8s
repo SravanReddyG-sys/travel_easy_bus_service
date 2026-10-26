@@ -1,0 +1,150 @@
+pipeline {
+    agent any
+
+    triggers {
+        githubPush()
+    }
+
+    environment {
+        // Build tools and paths
+        MAVEN_HOME   = 'C:\\Program Files\\apache-maven-3.10.0'
+        JAVA_HOME    = 'C:\\Program Files\\Java\\jdk-21.0.12.1'
+        
+        // Expose Docker daemon communication via local TCP socket
+        DOCKER_HOST  = 'tcp://127.0.0.1:2375'
+        
+        // Tool paths including kubectl, k3d, node, maven, java, and docker
+        PATH         = "C:\\Program Files\\apache-maven-3.10.0\\bin;C:\\Program Files\\Java\\jdk-21.0.12.1\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Users\\reddy\\AppData\\Local\\Microsoft\\WindowsApps;${env.PATH}"
+    }
+
+    stages {
+        // Stage 1: Checkout - Pull latest source code from GitHub
+        stage('Checkout') {
+            steps {
+                echo '=== Stage 1: Checking out code from GitHub ==='
+                checkout scm
+            }
+        }
+
+        // Stage 2: Backend Build & Test - Compile Java 21 Spring Boot app & execute 114 tests
+        stage('Backend: Build & Test') {
+            steps {
+                echo '=== Stage 2: Compiling Java backend and running test suite ==='
+                dir('backend') {
+                    bat 'mvn clean test'
+                }
+            }
+            post {
+                always {
+                    echo '=== Reporting: Publishing JUnit test results ==='
+                    junit allowEmptyResults: true, testResults: 'backend/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        // Stage 3: Backend Package JAR - Generate executable JAR artifact
+        stage('Backend: Package JAR') {
+            steps {
+                echo '=== Stage 3: Packaging backend into executable JAR ==='
+                dir('backend') {
+                    bat 'mvn package -DskipTests'
+                }
+            }
+            post {
+                success {
+                    echo '=== Archiving backend JAR artifact ==='
+                    archiveArtifacts allowEmptyArchive: true, artifacts: 'backend/target/*.jar', fingerprint: true
+                }
+            }
+        }
+
+        // Stage 4: Frontend Build - Install npm dependencies & compile Angular 20 production bundle
+        stage('Frontend: Build Angular') {
+            steps {
+                echo '=== Stage 4: Compiling Angular Frontend Production Bundle ==='
+                dir('frontend') {
+                    bat 'npm ci'
+                    bat 'npm run build'
+                }
+            }
+        }
+
+        // Stage 5: Containerize - Assemble Docker images for frontend and backend
+        stage('Docker: Build Images') {
+            steps {
+                echo '=== Stage 5: Building Frontend & Backend Docker Images ==='
+                bat 'docker compose build'
+                bat 'docker tag travel-easy-bus-service-cicd-bus-service:latest traveleasy-bus-service:latest'
+                bat 'docker tag travel-easy-bus-service-cicd-bus-ui:latest traveleasy-bus-ui:latest'
+            }
+        }
+
+        // Stage 6: Local Bridge - Import images directly into k3d Kubernetes cluster
+        stage('K8s: Import Images (Local Bridge)') {
+            steps {
+                echo '=== Stage 6: Importing Docker Images into Kubernetes Cluster ==='
+                bat 'k3d image import traveleasy-bus-service:latest traveleasy-bus-ui:latest -c traveleasy-cluster'
+            }
+        }
+
+        // Stage 7: Deploy - Apply Kubernetes manifests (Namespace, DB, Backend, Frontend, HPA)
+        stage('K8s: Deploy Application') {
+            steps {
+                echo '=== Stage 7: Applying Kubernetes Declarative Manifests ==='
+                bat 'kubectl apply -f k8s/'
+            }
+        }
+
+        // Stage 8: Rollout Status - Wait for Pods to become Ready
+        stage('K8s: Verify Rollout') {
+            steps {
+                echo '=== Stage 8: Waiting for Deployment Rollouts to Complete ==='
+                bat 'kubectl rollout status deployment/bus-db -n traveleasy --timeout=90s'
+                bat 'kubectl rollout status deployment/bus-service -n traveleasy --timeout=120s'
+                bat 'kubectl rollout status deployment/bus-ui -n traveleasy --timeout=60s'
+            }
+        }
+
+        // Stage 9: Scale Deployment - Dynamically scale microservice replicas
+        stage('K8s: Scale Application') {
+            steps {
+                echo '=== Stage 9: Scaling Microservice Backend Deployment to 3 Replicas ==='
+                bat 'kubectl scale deployment/bus-service --replicas=3 -n traveleasy'
+                bat 'kubectl get pods -l app=bus-service -n traveleasy'
+            }
+        }
+
+        // Stage 10: Verify Deployment - Automated smoke test on microservice health endpoint
+        stage('Verify Deployment Health') {
+            steps {
+                echo '=== Stage 10: Verifying Microservice Health via Localhost Routing ==='
+                sleep 15
+                bat 'C:\\Windows\\System32\\curl.exe -f http://localhost:8081/api/v1/health'
+                echo '=== Kubernetes deployment verified: Multi-replica microservice is LIVE! ==='
+            }
+        }
+    }
+
+    post {
+        always {
+            echo '=== Post: Logging Kubernetes Cluster Resources ==='
+            bat 'kubectl get all,hpa,pvc -n traveleasy'
+            echo '=== Post: Cleaning up dangling Docker images to reclaim disk space ==='
+            bat 'docker image prune -f'
+        }
+        success {
+            echo '========================================================================'
+            echo ' TASK 3: FULL-STACK KUBERNETES CI/CD PIPELINE SUCCEEDED!'
+            echo ' Frontend Angular UI:  http://localhost:4200'
+            echo ' Backend Swagger API:  http://localhost:8081/swagger-ui.html'
+            echo ' Backend Health Check: http://localhost:8081/api/v1/health'
+            echo ' Kubernetes Namespace: traveleasy'
+            echo '========================================================================'
+        }
+        failure {
+            echo '========================================================================'
+            echo ' Task 3 Pipeline Failed! Please inspect Jenkins console and pod logs.'
+            echo '========================================================================'
+        }
+    }
+}

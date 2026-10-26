@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bus-service-config
+  namespace: traveleasy
+data:
+  SERVER_PORT: "8081"
+  SPRING_PROFILES_ACTIVE: "dev"
+  DB_URL: "jdbc:postgresql://bus-db:5432/bus_db"
+  DB_USERNAME: "traveleasy_user"
+  CORS_ALLOWED_ORIGINS: "http://localhost:4200,http://localhost:8080,http://localhost"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bus-service-secret
+  namespace: traveleasy
+type: Opaque
+stringData:
+  DB_PASSWORD: "traveleasy_pass"
+  JWT_SECRET: "TravelEasyBusServiceSuperSecretKey2026MustBeAtLeast256BitsLongForHMACSHA256!"
+  JWT_ISSUER: "traveleasy-auth-service"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bus-service
+  namespace: traveleasy
+  labels:
+    app: bus-service
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bus-service
+  template:
+    metadata:
+      labels:
+        app: bus-service
+        tier: backend
+    spec:
+      containers:
+        - name: bus-service
+          image: traveleasy-bus-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              name: http
+          envFrom:
+            - configMapRef:
+                name: bus-service-config
+            - secretRef:
+                name: bus-service-secret
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8081
+            initialDelaySeconds: 40
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8081
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bus-service
+  namespace: traveleasy
+  labels:
+    app: bus-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8081
+      targetPort: 8081
+      name: http
+  selector:
+    app: bus-service
